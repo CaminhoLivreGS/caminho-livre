@@ -1,0 +1,10 @@
+# Copie para terraform.tfvars (ignorado pelo git) e preencha.
+# Descubra a assinatura com: az account show --query id -o tsv
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+location        = "brazilsouth"
+
+# Opcional: seu IP público para acessar o SCM/Kudu (SSH do App Service).
+# Descubra com: curl -s https://api.ipify.org
+# NUNCA use 0.0.0.0/0 (a validação rejeita).
+admin_cidrs = []
