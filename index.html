@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Sem maximum-scale/user-scalable: o zoom do usuário nunca é bloqueado. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b4f9c" />
+    <title>Caminho Livre — Nova denúncia</title>
+    <link rel="stylesheet" href="./app/estilos.css" />
+  </head>
+  <body>
+    <!-- Ícones (SVG sprite). Sempre aria-hidden: o texto do botão é o nome acessível. -->
+    <svg xmlns="http://www.w3.org/2000/svg" hidden>
+      <symbol id="i-camera" viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v11H3z" /><circle cx="12" cy="13" r="3.5" /></symbol>
+      <symbol id="i-galeria" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9.5" r="1.5" /><path d="M21 16l-5-5-9 9" /></symbol>
+      <symbol id="i-acessibilidade" viewBox="0 0 24 24"><circle cx="11" cy="4" r="1.8" /><path d="M11 7v6h5l2.5 5.5" /><path d="M11 10h5" /><path d="M8 10.5a5.5 5.5 0 1 0 7.5 7" /></symbol>
+      <symbol id="i-obstaculo" viewBox="0 0 24 24"><path d="M10 3h4l4.5 16h-13z" /><path d="M8.3 9h7.4M7 14h10" /><path d="M3 21h18" /></symbol>
+      <symbol id="i-alagamento" viewBox="0 0 24 24"><path d="M12 2.5s-4.5 5.2-4.5 8.3a4.5 4.5 0 0 0 9 0C16.5 7.7 12 2.5 12 2.5z" /><path d="M2.5 19c2 0 2.3-1.5 4.7-1.5S9.6 19 12 19s2.4-1.5 4.8-1.5S19.5 19 21.5 19" /></symbol>
+      <symbol id="i-voltar" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></symbol>
+      <symbol id="i-borrar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" stroke-dasharray="2.5 2.5" /><path d="M8 9.5h8M7 12.5h10M8.5 15.5h7" /></symbol>
+      <symbol id="i-desfazer" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></symbol>
+      <symbol id="i-enviar" viewBox="0 0 24 24"><path d="M21.5 2.5L10.5 13.5" /><path d="M21.5 2.5l-7 19-4-8-8-4z" /></symbol>
+      <symbol id="i-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" /><path d="M7.5 12.5l3 3 6-6.5" /></symbol>
+      <symbol id="i-revisao" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" /><path d="M12 6.5V12l3.5 3" /></symbol>
+      <symbol id="i-erro" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" /><path d="M8.5 8.5l7 7M15.5 8.5l-7 7" /></symbol>
+      <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+      <symbol id="i-menos" viewBox="0 0 24 24"><path d="M5 12h14" /></symbol>
+      <symbol id="i-cima" viewBox="0 0 24 24"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5" /></symbol>
+      <symbol id="i-baixo" viewBox="0 0 24 24"><path d="M12 5v14M5.5 12.5L12 19l6.5-6.5" /></symbol>
+      <symbol id="i-esquerda" viewBox="0 0 24 24"><path d="M19 12H5M11.5 5.5L5 12l6.5 6.5" /></symbol>
+      <symbol id="i-direita" viewBox="0 0 24 24"><path d="M5 12h14M12.5 5.5L19 12l-6.5 6.5" /></symbol>
+      <symbol id="i-concluir" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></symbol>
+      <symbol id="i-trocar" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 9" /><path d="M20 4v5h-5" /><path d="M20 12a8 8 0 0 1-13.7 5.6L4 15" /><path d="M4 20v-5h5" /></symbol>
+      <symbol id="i-fechar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></symbol>
+    </svg>
+
+    <a class="pular" href="#conteudo">Pular para o conteúdo</a>
+
+    <header class="topo">
+      <p class="marca">
+        <svg class="icone" aria-hidden="true"><use href="#i-acessibilidade" /></svg>
+        Caminho Livre
+      </p>
+      <!-- Progresso: texto + marcadores. aria-current marca o passo atual. -->
+      <nav aria-label="Progresso">
+        <ol class="passos" id="passos">
+          <li data-passo="foto" aria-current="step"><span class="rotulo-passo">Foto</span></li>
+          <li data-passo="tipo"><span class="rotulo-passo">Tipo</span></li>
+          <li data-passo="resultado"><span class="rotulo-passo">Enviar</span></li>
+        </ol>
+      </nav>
+    </header>
+
+    <!-- Anúncios para leitor de tela (troca de passo, progresso). -->
+    <p class="so-leitor" id="anuncio" aria-live="polite"></p>
+
+    <main id="conteudo">
+      <!-- PASSO 1: FOTO -->
+      <section id="passo-foto" class="passo" aria-labelledby="titulo-foto">
+        <h1 id="titulo-foto" tabindex="-1">Fotografe o problema</h1>
+        <div class="grade-botoes">
+          <button type="button" class="botao botao-grande" id="btn-camera">
+            <svg class="icone" aria-hidden="true"><use href="#i-camera" /></svg>
+            <span>Câmera</span>
+          </button>
+          <button type="button" class="botao botao-grande botao-secundario" id="btn-galeria">
+            <svg class="icone" aria-hidden="true"><use href="#i-galeria" /></svg>
+            <span>Galeria</span>
+          </button>
+        </div>
+        <input type="file" id="in-camera" accept="image/*" capture="environment" class="so-leitor" tabindex="-1" aria-hidden="true" />
+        <input type="file" id="in-galeria" accept="image/*" class="so-leitor" tabindex="-1" aria-hidden="true" />
+        <p class="dica" id="aviso-camera" role="alert" hidden></p>
+        <p class="dica">Rostos e placas são borrados automaticamente.</p>
+      </section>
+
+      <!-- Câmera ao vivo (getUserMedia). <dialog> modal: prende o foco e fecha com Esc. -->
+      <dialog id="dialogo-camera" class="dialogo-camera" aria-labelledby="titulo-camera">
+        <h2 id="titulo-camera" class="so-leitor">Câmera</h2>
+        <video id="video-camera" class="video-camera" playsinline muted autoplay aria-label="Imagem ao vivo da câmera"></video>
+        <div class="barra-camera">
+          <button type="button" class="botao botao-icone botao-camera-lateral" id="btn-cancelar-camera" aria-label="Fechar câmera">
+            <svg class="icone" aria-hidden="true"><use href="#i-fechar" /></svg>
+          </button>
+          <button type="button" class="botao-disparo" id="btn-disparar" aria-label="Tirar foto" disabled>
+            <span class="disparo-anel" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="botao botao-icone botao-camera-lateral" id="btn-trocar-camera" aria-label="Trocar câmera" hidden>
+            <svg class="icone" aria-hidden="true"><use href="#i-trocar" /></svg>
+          </button>
+        </div>
+      </dialog>
+
+      <!-- PASSO 2: TIPO -->
+      <section id="passo-tipo" class="passo" aria-labelledby="titulo-tipo" hidden>
+        <h1 id="titulo-tipo" tabindex="-1">O que você encontrou?</h1>
+        <img id="miniatura" class="miniatura" alt="Foto escolhida" />
+        <div class="lista-tipos" role="group" aria-labelledby="titulo-tipo">
+          <button type="button" class="botao botao-tipo" data-categoria="ACESSIBILIDADE">
+            <svg class="icone" aria-hidden="true"><use href="#i-acessibilidade" /></svg>
+            <span class="texto-tipo"><span class="titulo-tipo">Calçada</span><span class="exemplo">buraco, degrau, piso tátil</span></span>
+          </button>
+          <button type="button" class="botao botao-tipo" data-categoria="OBSTACULO">
+            <svg class="icone" aria-hidden="true"><use href="#i-obstaculo" /></svg>
+            <span class="texto-tipo"><span class="titulo-tipo">Obstáculo</span><span class="exemplo">obra, entulho, árvore</span></span>
+          </button>
+          <button type="button" class="botao botao-tipo" data-categoria="ALAGAMENTO">
+            <svg class="icone" aria-hidden="true"><use href="#i-alagamento" /></svg>
+            <span class="texto-tipo"><span class="titulo-tipo">Alagamento</span><span class="exemplo">água parada</span></span>
+          </button>
+        </div>
+        <button type="button" class="botao botao-texto" data-voltar="foto">
+          <svg class="icone" aria-hidden="true"><use href="#i-voltar" /></svg>
+          <span>Trocar foto</span>
+        </button>
+      </section>
+
+      <!-- PASSO 3: RESULTADO -->
+      <section id="passo-resultado" class="passo" aria-labelledby="titulo-resultado" hidden>
+        <h1 id="titulo-resultado" tabindex="-1" class="so-leitor">Resultado da análise</h1>
+
+        <div id="carregando" class="carregando" role="status">
+          <span class="giro" aria-hidden="true"></span>
+          <span id="texto-carregando">Analisando…</span>
+        </div>
+
+        <div id="resultado" hidden>
+          <div id="faixa-status" class="faixa-status">
+            <svg class="icone icone-status" aria-hidden="true"><use id="icone-status" href="#i-ok" /></svg>
+            <div>
+              <p class="titulo-status" id="titulo-status"></p>
+              <p class="mensagem-status" id="mensagem-status"></p>
+            </div>
+          </div>
+
+          <div class="area-foto" id="area-foto" tabindex="-1" aria-describedby="ajuda-borrar">
+            <div class="caixa-borrar" id="caixa-borrar" hidden></div>
+          </div>
+
+          <!-- Ações principais -->
+          <div class="grade-botoes" id="acoes">
+            <button type="button" class="botao botao-grande" id="btn-enviar">
+              <svg class="icone" aria-hidden="true"><use href="#i-enviar" /></svg>
+              <span>Enviar</span>
+            </button>
+            <button type="button" class="botao botao-grande botao-secundario" id="btn-borrar" aria-expanded="false" aria-controls="painel-borrar">
+              <svg class="icone" aria-hidden="true"><use href="#i-borrar" /></svg>
+              <span>Borrar</span>
+            </button>
+            <button type="button" class="botao botao-grande botao-secundario" id="btn-outra">
+              <svg class="icone" aria-hidden="true"><use href="#i-camera" /></svg>
+              <span>Outra foto</span>
+            </button>
+          </div>
+
+          <!-- Borrão manual: tocar posiciona; setas/botões movem; +/− mudam o tamanho. -->
+          <div id="painel-borrar" class="painel-borrar" hidden>
+            <p id="ajuda-borrar" class="dica">Toque na foto para posicionar o quadrado.</p>
+            <div class="grade-borrar">
+              <button type="button" class="botao botao-grande" id="btn-aplicar-borrao">
+                <svg class="icone" aria-hidden="true"><use href="#i-borrar" /></svg>
+                <span>Borrar aqui</span>
+              </button>
+              <button type="button" class="botao botao-grande botao-secundario" id="btn-desfazer" disabled>
+                <svg class="icone" aria-hidden="true"><use href="#i-desfazer" /></svg>
+                <span>Desfazer</span>
+              </button>
+              <button type="button" class="botao botao-grande botao-secundario" id="btn-concluir-borrao">
+                <svg class="icone" aria-hidden="true"><use href="#i-concluir" /></svg>
+                <span>Pronto</span>
+              </button>
+            </div>
+            <div class="controles-borrar">
+              <div class="setas" role="group" aria-label="Mover quadrado">
+                <button type="button" class="botao botao-icone seta-cima" data-mover="0,-1" aria-label="Mover para cima"><svg class="icone" aria-hidden="true"><use href="#i-cima" /></svg></button>
+                <button type="button" class="botao botao-icone seta-esq" data-mover="-1,0" aria-label="Mover para a esquerda"><svg class="icone" aria-hidden="true"><use href="#i-esquerda" /></svg></button>
+                <button type="button" class="botao botao-icone seta-dir" data-mover="1,0" aria-label="Mover para a direita"><svg class="icone" aria-hidden="true"><use href="#i-direita" /></svg></button>
+                <button type="button" class="botao botao-icone seta-baixo" data-mover="0,1" aria-label="Mover para baixo"><svg class="icone" aria-hidden="true"><use href="#i-baixo" /></svg></button>
+              </div>
+              <div class="tamanho" role="group" aria-label="Tamanho do quadrado">
+                <button type="button" class="botao botao-icone" data-tamanho="-1" aria-label="Diminuir"><svg class="icone" aria-hidden="true"><use href="#i-menos" /></svg></button>
+                <button type="button" class="botao botao-icone" data-tamanho="1" aria-label="Aumentar"><svg class="icone" aria-hidden="true"><use href="#i-mais" /></svg></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="erro" class="faixa-status faixa-erro" role="alert" hidden>
+          <svg class="icone icone-status" aria-hidden="true"><use href="#i-erro" /></svg>
+          <div>
+            <p class="titulo-status">Algo deu errado</p>
+            <p class="mensagem-status" id="mensagem-erro"></p>
+          </div>
+        </div>
+        <button type="button" class="botao botao-grande" id="btn-erro-voltar" hidden>
+          <svg class="icone" aria-hidden="true"><use href="#i-camera" /></svg>
+          <span>Outra foto</span>
+        </button>
+      </section>
+
+      <!-- PASSO 4: ENVIADO -->
+      <section id="passo-enviado" class="passo passo-final" aria-labelledby="titulo-enviado" hidden>
+        <svg class="icone icone-final" aria-hidden="true"><use href="#i-ok" /></svg>
+        <h1 id="titulo-enviado" tabindex="-1">Denúncia enviada</h1>
+        <p class="dica" id="detalhe-enviado">Obrigado por ajudar a cidade.</p>
+        <button type="button" class="botao botao-grande" id="btn-nova">
+          <svg class="icone" aria-hidden="true"><use href="#i-mais" /></svg>
+          <span>Nova denúncia</span>
+        </button>
+      </section>
+    </main>
+
+    <script type="module" src="./app/app.js"></script>
+  </body>
+</html>

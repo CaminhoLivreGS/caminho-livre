@@ -1,0 +1,9 @@
+{
+  "_comentario": "Piso de regressão medido em dataset/manifest.json (fotos do Commons, sem pessoas). Se uma mudança melhorar os números, atualize estes limites; se piorar, o teste falha. Ver npm run test:precisao.",
+  "ACESSIBILIDADE": { "acuraciaMin": 0.65, "falsosPositivosMax": 5, "fotosReaisRejeitadasMax": 0 },
+  "OBSTACULO": { "acuraciaMin": 0.89, "falsosPositivosMax": 1, "fotosReaisRejeitadasMax": 0 },
+  "ALAGAMENTO": { "acuraciaMin": 0.86, "falsosPositivosMax": 0, "fotosReaisRejeitadasMax": 0 },
+  "CENA": { "fotosDeRuaRejeitadasMax": 0, "foraDeContextoRejeitadasMin": 2 },
+  "PLACAS": { "placasCobertasMin": 17, "areaFalsaMediaMax": 0.005 },
+  "QUALIDADE": { "originaisRejeitadosMax": 0, "degradadasAceitasMax": 2, "colisoesMax": 0 }
+}

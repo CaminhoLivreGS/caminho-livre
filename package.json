@@ -1,0 +1,29 @@
+{
+  "name": "caminho-livre",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Caminho Livre: denúncias de acessibilidade urbana com validação por visão computacional clássica (OpenCV.js) no navegador.",
+  "type": "module",
+  "scripts": {
+    "deps": "sh scripts/baixar-dependencias.sh",
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test test/*.test.js",
+    "test:precisao": "node scripts/avaliar-precisao.js",
+    "dataset:brasil": "node scripts/gerar-manifesto-brasil.js"
+  },
+  "dependencies": {
+    "@techstark/opencv-js": "4.9.0-release.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "4.7.0",
+    "vite": "6.4.6"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

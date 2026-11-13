@@ -1,0 +1,562 @@
+/*
+ * Caminho Livre — estilos com foco em acessibilidade.
+ * - Contraste de texto ≥ 7:1 (AAA) nos temas claro e escuro; bordas ≥ 5,8:1.
+ * - Alvos de toque ≥ 48px (botões principais ≥ 64px).
+ * - Unidades relativas: funciona com zoom de 200% e fonte grande do sistema.
+ * - Respeita modo escuro, alto contraste do sistema e movimento reduzido.
+ */
+
+:root {
+  --fundo: #ffffff;
+  --superficie: #f2f4f7;
+  --texto: #111418;
+  --texto-suave: #3d4651; /* 9,5:1 sobre branco */
+  --primaria: #0b4f9c; /* 8,0:1 sobre branco */
+  --primaria-texto: #ffffff;
+  --borda: #5b6673; /* 5,9:1 — bordas visíveis */
+  --foco: #ffbf00;
+  --ok-fundo: #e3f4e8;
+  --ok-texto: #0a5c26;
+  --revisao-fundo: #fff4d1;
+  --revisao-texto: #5e4300;
+  --erro-fundo: #fde7e7;
+  --erro-texto: #8f1414;
+  --raio: 0.9rem;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #0f1216;
+    --superficie: #1c2128;
+    --texto: #f3f5f7;
+    --texto-suave: #c4ccd5;
+    --primaria: #8cc4ff; /* 10,2:1 sobre o fundo escuro */
+    --primaria-texto: #0b1a2b;
+    --borda: #8a96a3;
+    --ok-fundo: #0f2f1b;
+    --ok-texto: #9be3b0;
+    --revisao-fundo: #33280a;
+    --revisao-texto: #ffd978;
+    --erro-fundo: #3a1414;
+    --erro-texto: #ffb3b3;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 112.5%; /* 18px base, escala com a preferência do usuário */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+/* ---- Utilitários ---------------------------------------------------------- */
+
+/* `hidden` precisa vencer os display: flex/grid dos componentes. */
+[hidden] {
+  display: none !important;
+}
+
+.so-leitor {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pular {
+  position: absolute;
+  left: 0.5rem;
+  top: -10rem;
+  z-index: 10;
+  background: var(--foco);
+  color: #000;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  border-radius: 0.5rem;
+}
+.pular:focus {
+  top: 0.5rem;
+}
+
+/* Foco sempre visível e forte (amarelo + contorno escuro: funciona em qualquer fundo). */
+:focus-visible {
+  outline: 0.25rem solid var(--foco);
+  outline-offset: 0.2rem;
+  box-shadow: 0 0 0 0.45rem #000;
+}
+/* Títulos recebem foco por programa (troca de passo) só para o leitor de tela;
+   não são interativos, então não mostram contorno. */
+h1[tabindex='-1']:focus,
+h1[tabindex='-1']:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.icone {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---- Topo e progresso ----------------------------------------------------- */
+
+.topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid var(--borda);
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--primaria);
+}
+
+.passos {
+  display: flex;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: passo;
+}
+.passos li {
+  counter-increment: passo;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border: 2px solid var(--borda);
+  border-radius: 999px;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.passos li::before {
+  content: counter(passo);
+  font-weight: 800;
+}
+.passos li[aria-current='step'] {
+  background: var(--primaria);
+  border-color: var(--primaria);
+  color: var(--primaria-texto);
+}
+.passos li.feito {
+  color: var(--texto);
+}
+
+/* ---- Conteúdo ------------------------------------------------------------- */
+
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
+}
+
+h1 {
+  font-size: 1.6rem;
+  line-height: 1.25;
+  margin: 0.25rem 0 1.25rem;
+}
+
+.dica {
+  color: var(--texto-suave);
+  margin: 1rem 0;
+}
+
+.passo-final {
+  text-align: center;
+}
+.icone-final {
+  width: 6rem;
+  height: 6rem;
+  color: var(--ok-texto);
+  margin-top: 1rem;
+}
+
+/* ---- Botões --------------------------------------------------------------- */
+
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 3rem; /* ≥ 48px */
+  min-width: 3rem;
+  padding: 0.6rem 1rem;
+  border: 2px solid var(--primaria);
+  border-radius: var(--raio);
+  background: var(--primaria);
+  color: var(--primaria-texto);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation; /* sem atraso de duplo toque */
+}
+.botao:hover {
+  filter: brightness(1.1);
+}
+.botao:active {
+  transform: translateY(1px);
+}
+.botao:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: none;
+}
+
+.botao-secundario {
+  background: transparent;
+  color: var(--primaria);
+}
+
+.botao-texto {
+  background: transparent;
+  color: var(--primaria);
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  margin-top: 1rem;
+}
+
+.botao-grande {
+  flex-direction: column;
+  min-height: 5.5rem; /* ~100px */
+  font-size: 1.15rem;
+}
+.botao-grande .icone {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.botao-icone {
+  padding: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+}
+
+.grade-botoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+/* Cartões de tipo de problema: ícone grande + título + exemplo curto. */
+.lista-tipos {
+  display: grid;
+  gap: 0.75rem;
+}
+.botao-tipo {
+  justify-content: flex-start;
+  text-align: left;
+  min-height: 5.5rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--superficie);
+  color: var(--texto);
+  border-color: var(--borda);
+}
+.botao-tipo .icone {
+  width: 3rem;
+  height: 3rem;
+  color: var(--primaria);
+}
+.texto-tipo {
+  display: flex;
+  flex-direction: column;
+}
+.titulo-tipo {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+.exemplo {
+  font-weight: 500;
+  color: var(--texto-suave);
+}
+
+.miniatura {
+  display: block;
+  max-width: 100%;
+  max-height: 11rem;
+  margin: 0 0 1rem;
+  border-radius: var(--raio);
+  border: 2px solid var(--borda);
+}
+
+/* ---- Resultado ------------------------------------------------------------ */
+
+.carregando {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.giro {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0.35rem solid var(--superficie);
+  border-top-color: var(--primaria);
+  border-radius: 50%;
+  animation: girar 0.9s linear infinite;
+}
+@keyframes girar {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+.faixa-status {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  padding: 1rem;
+  border-radius: var(--raio);
+  border: 2px solid currentColor;
+  margin-bottom: 1rem;
+}
+.faixa-status p {
+  margin: 0;
+}
+.icone-status {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+.titulo-status {
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+.mensagem-status {
+  color: inherit;
+}
+.faixa-status[data-status='CONFIRMADO'] {
+  background: var(--ok-fundo);
+  color: var(--ok-texto);
+}
+.faixa-status[data-status='INCONCLUSIVO'] {
+  background: var(--revisao-fundo);
+  color: var(--revisao-texto);
+}
+.faixa-status[data-status='REJEITADO'],
+.faixa-erro {
+  background: var(--erro-fundo);
+  color: var(--erro-texto);
+}
+
+.area-foto {
+  position: relative;
+  margin-bottom: 1rem;
+  border-radius: var(--raio);
+  overflow: hidden;
+  border: 2px solid var(--borda);
+  line-height: 0;
+}
+.area-foto canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.area-foto.borrando {
+  cursor: crosshair;
+  touch-action: none; /* arrastar dentro da foto não rola a página */
+}
+.caixa-borrar {
+  position: absolute;
+  border: 3px dashed #ff2d2d;
+  outline: 2px solid #fff;
+  background: rgba(255, 45, 45, 0.18);
+  pointer-events: none;
+}
+
+.painel-borrar {
+  border: 2px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 1rem;
+  margin-top: 1rem;
+  background: var(--superficie);
+}
+/* Ação principal em largura total; Desfazer e Pronto lado a lado. */
+.grade-borrar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.grade-borrar > :first-child {
+  grid-column: 1 / -1;
+}
+.controles-borrar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1rem;
+}
+/* Cruz de setas (ajuste fino; 48px = alvo mínimo recomendado) */
+.setas {
+  display: grid;
+  grid-template-columns: repeat(3, 3rem);
+  grid-template-rows: repeat(3, 3rem);
+  gap: 0.25rem;
+}
+.setas .botao-icone,
+.tamanho .botao-icone {
+  width: 3rem;
+  height: 3rem;
+}
+.seta-cima {
+  grid-area: 1 / 2;
+}
+.seta-esq {
+  grid-area: 2 / 1;
+}
+.seta-dir {
+  grid-area: 2 / 3;
+}
+.seta-baixo {
+  grid-area: 3 / 2;
+}
+.tamanho {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ---- Câmera ao vivo ------------------------------------------------------- */
+
+.dialogo-camera {
+  width: 100vw;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #000;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+.dialogo-camera:not([open]) {
+  display: none;
+}
+.dialogo-camera::backdrop {
+  background: #000;
+}
+.video-camera {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+  background: #000;
+}
+.barra-camera {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom));
+}
+.botao-camera-lateral {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #fff;
+  color: #fff;
+}
+#btn-cancelar-camera {
+  justify-self: start;
+}
+#btn-trocar-camera {
+  justify-self: end;
+}
+/* Disparador: círculo branco de 80px (alvo grande, padrão conhecido de câmera). */
+.botao-disparo {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  border: 0.3rem solid #fff;
+  background: transparent;
+  padding: 0.3rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.disparo-anel {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+}
+.botao-disparo:active .disparo-anel {
+  transform: scale(0.9);
+}
+.botao-disparo:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+
+/* ---- Preferências do sistema ---------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition: none !important;
+  }
+  .giro {
+    animation: none;
+    border-top-color: var(--primaria);
+  }
+}
+
+/* Alto contraste do Windows/Android: usa cores do sistema e mantém bordas. */
+@media (forced-colors: active) {
+  .botao,
+  .faixa-status,
+  .passos li {
+    border: 2px solid ButtonText;
+  }
+  .passos li[aria-current='step'] {
+    background: Highlight;
+    color: HighlightText;
+  }
+  .icone {
+    stroke: currentColor;
+  }
+  .caixa-borrar {
+    border-color: Highlight;
+  }
+}

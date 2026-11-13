@@ -1,0 +1,28 @@
+# Dependências binárias: baixadas por `npm run deps` (scripts/baixar-dependencias.sh)
+public/opencv/
+public/cascades/
+node_modules/
+dist/
+.DS_Store
+*.log
+
+# Segredos locais (use .env.example como modelo)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+
+# Terraform: estado e variáveis ficam no Azure Blob Storage / GitHub Secrets
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

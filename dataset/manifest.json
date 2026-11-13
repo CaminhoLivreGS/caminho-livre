@@ -1,0 +1,141 @@
+{
+  "diretorio": "dataset/commons/",
+  "ACESSIBILIDADE": {
+    "positivos": [
+      "buraco_pos2_1.jpg",
+      "buraco_pos2_2.jpg",
+      "buraco_pos2_3.jpg",
+      "buraco_pos2_4.jpg",
+      "buraco_pos2_5.jpg",
+      "buraco_pos_5.jpg",
+      "buraco_pos_0.jpg",
+      "buraco_pos_1.jpg",
+      "buraco_pos_3.jpg",
+      "calcada_neg2_0.jpg",
+      "quebrada_1.jpg",
+      "quebrada_3.jpg",
+      "escada_1.jpg",
+      "escada_2.jpg",
+      "escada_3.jpg",
+      "escada_4.jpg",
+      "rachadura2_0.jpg",
+      "rachadura2_1.jpg",
+      "rachadura2_2.jpg",
+      "rachadura2_4.jpg"
+    ],
+    "negativos": [
+      "calcada_neg2_1.jpg",
+      "calcada_neg2_2.jpg",
+      "calcada_neg_0.jpg",
+      "calcada_neg_1.jpg",
+      "calcada_neg_4.jpg",
+      "degrau_pos_0.jpg",
+      "degrau_pos_1.jpg",
+      "degrau_pos_2.jpg",
+      "degrau_pos_3.jpg",
+      "degrau_pos_5.jpg",
+      "tatil_pos_3.jpg",
+      "tatil_pos_5.jpg",
+      "rosto_1.jpg",
+      "cone2_1.jpg",
+      "poca2_3.jpg"
+    ]
+  },
+  "OBSTACULO": {
+    "positivos": [
+      "cone_pos_0.jpg",
+      "cone_pos_1.jpg",
+      "cone_pos_2.jpg",
+      "cone_pos_3.jpg",
+      "cone_pos_4.jpg",
+      "cone_pos_5.jpg",
+      "cone2_0.jpg",
+      "cone2_1.jpg",
+      "cone2_3.jpg",
+      "arvore_pos_4.jpg",
+      "lixo_pos_1.jpg",
+      "lixo_pos_4.jpg",
+      "entulho_0.jpg",
+      "entulho_1.jpg",
+      "estreita_0.jpg"
+    ],
+    "negativos": [
+      "calcada_neg2_1.jpg",
+      "degrau_pos_0.jpg",
+      "degrau_pos_1.jpg",
+      "degrau_pos_2.jpg",
+      "degrau_pos_3.jpg",
+      "rosto_1.jpg",
+      "rosto_2.jpg",
+      "arvore_pos_2.jpg",
+      "arvore_pos_3.jpg",
+      "arvore_pos_5.jpg",
+      "lixo_pos_5.jpg",
+      "poca2_3.jpg",
+      "calcada_neg2_2.jpg",
+      "tatil_pos_3.jpg"
+    ]
+  },
+  "ALAGAMENTO": {
+    "positivos": [
+      "alaga2_0.jpg",
+      "alaga2_1.jpg",
+      "alaga2_2.jpg",
+      "alaga2_3.jpg",
+      "alaga3_0.jpg",
+      "alaga3_2.jpg",
+      "alaga_pos_4.jpg",
+      "poca2_0.jpg",
+      "poca2_1.jpg"
+    ],
+    "negativos": [
+      "calcada_neg2_1.jpg",
+      "degrau_pos_0.jpg",
+      "degrau_pos_1.jpg",
+      "degrau_pos_2.jpg",
+      "rosto_1.jpg",
+      "rosto_2.jpg",
+      "buraco_pos2_3.jpg",
+      "calcada_neg2_2.jpg",
+      "tatil_pos_5.jpg",
+      "arvore_pos_5.jpg",
+      "cone2_1.jpg",
+      "escada_3.jpg",
+      "buraco_pos2_2.jpg",
+      "calcada_neg_4.jpg"
+    ]
+  },
+  "LGPD": [],
+  "FORA_DE_CONTEXTO": [
+    "selfie_1.jpg",
+    "tatil_pos_0.jpg",
+    "quebrada_2.jpg",
+    "placa_0.jpg",
+    "placa_1.jpg",
+    "placa_3.jpg"
+  ],
+  "RETRATOS": [
+    "selfie_1.jpg"
+  ],
+  "PLACAS": [
+    "placa_br_01.jpg",
+    "placa_br_02.jpg",
+    "placa_br_03.jpg",
+    "placa_br_05.jpg",
+    "placa_br_06.jpg",
+    "placa_br_07.jpg",
+    "placa_br_10.jpg"
+  ],
+  "FUNDOS_PLACA": [
+    "calcada_neg_1.jpg",
+    "degrau_pos_0.jpg",
+    "degrau_pos_1.jpg",
+    "degrau_pos_2.jpg",
+    "degrau_pos_3.jpg",
+    "calcada_neg2_1.jpg",
+    "buraco_pos2_4.jpg",
+    "cone2_1.jpg",
+    "poca2_3.jpg",
+    "rosto_2.jpg"
+  ]
+}

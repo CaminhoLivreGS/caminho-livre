@@ -1,0 +1,35 @@
+{
+  "diretorio": "dataset/brasil/",
+  "fracaoTeste": 0.3,
+  "geradoEm": "2026-11-13T01:25:57.738Z",
+  "ACESSIBILIDADE": {
+    "treino": {
+      "positivos": [],
+      "negativos": []
+    },
+    "teste": {
+      "positivos": [],
+      "negativos": []
+    }
+  },
+  "OBSTACULO": {
+    "treino": {
+      "positivos": [],
+      "negativos": []
+    },
+    "teste": {
+      "positivos": [],
+      "negativos": []
+    }
+  },
+  "ALAGAMENTO": {
+    "treino": {
+      "positivos": [],
+      "negativos": []
+    },
+    "teste": {
+      "positivos": [],
+      "negativos": []
+    }
+  }
+}

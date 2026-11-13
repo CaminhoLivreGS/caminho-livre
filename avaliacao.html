@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Caminho Livre — Avaliação dos pipelines</title>
+    <style>
+      body { font: 13px system-ui, sans-serif; margin: 1rem; }
+      table { border-collapse: collapse; margin-bottom: 1rem; }
+      td, th { border: 1px solid #bbb; padding: 2px 6px; text-align: left; }
+      .ok { background: #d9f7d9; } .erro { background: #ffd6d6; }
+      #grade { display: grid; grid-template-columns: repeat(5, 290px); gap: 6px; }
+      #grade figure { margin: 0; } #grade canvas { width: 290px; height: 200px; object-fit: contain; background: #222; }
+      #grade figcaption { font-weight: 600; padding: 1px 3px; }
+    </style>
+  </head>
+  <body>
+    <h1>Avaliação contra dataset/manifest.json</h1>
+    <p>Parâmetros de URL: <code>?cat=ACESSIBILIDADE</code> (ou OBSTACULO, ALAGAMENTO, LGPD) e <code>&amp;mostrar=1</code> para ver as imagens processadas.</p>
+    <pre id="out" role="status" aria-live="polite">carregando…</pre>
+    <div id="tabelas"></div>
+    <div id="grade"></div>
+
+    <script async src="./public/opencv/opencv.js"></script>
+    <script type="module">
+      import { analisarImagem, CONFIG } from './src/vision/VisionPipeline.js';
+
+      CONFIG.LGPD.CASCADE_BASE_URL = './public/cascades/';
+      CONFIG.GERAL.TIMEOUT_OPENCV_MS = 1e9; // permite rodar no Chrome headless
+
+      const params = new URLSearchParams(location.search);
+      const filtro = params.get('cat');
+
+      // ?cfg={"ALAGAMENTO":{"LISO_MAX":16}} sobrescreve parâmetros para calibração.
+      const mesclar = (alvo, fonte) => {
+        for (const [k, v] of Object.entries(fonte)) {
+          if (v && typeof v === 'object' && !Array.isArray(v) && alvo[k]) mesclar(alvo[k], v);
+          else alvo[k] = v;
+        }
+      };
+      if (params.get('cfg')) mesclar(CONFIG, JSON.parse(params.get('cfg')));
+      const mostrar = params.get('mostrar') === '1';
+      // ?dataset=commons (padrão) ou brasil; ?conjunto=treino (padrão) ou teste.
+      // Treino = fotos usadas para calibrar os limiares; teste = fotos nunca usadas
+      // na calibração (mede a precisão real). O dataset commons só tem treino.
+      const nomeDataset = params.get('dataset') ?? 'commons';
+      const conjunto = params.get('conjunto') ?? 'treino';
+      const arquivoManifesto = nomeDataset === 'brasil' ? './dataset/brasil/manifest.json' : './dataset/manifest.json';
+      const respManifesto = await fetch(arquivoManifesto);
+      if (!respManifesto.ok) {
+        const msg = `ERRO: manifesto ${arquivoManifesto} não encontrado. Para o dataset brasil, rode: npm run dataset:brasil`;
+        document.getElementById('out').textContent = msg;
+        throw new Error(msg);
+      }
+      const manifest = await respManifesto.json();
+      const dir = manifest.diretorio;
+      const casosDe = (cat) => {
+        const entrada = manifest[cat] ?? {};
+        const lista = entrada.treino || entrada.teste ? entrada[conjunto] ?? {} : conjunto === 'treino' ? entrada : {};
+        return [...(lista.positivos ?? []).map((a) => [a, true]), ...(lista.negativos ?? []).map((a) => [a, false])];
+      };
+
+      const carregarUmaVez = (src) => new Promise((ok, falha) => {
+        const img = new Image();
+        img.onload = () => ok(img);
+        img.onerror = () => falha(new Error('não carregou ' + src));
+        img.src = src;
+      });
+      async function carregar(src) {
+        for (let tentativa = 0; ; tentativa++) {
+          try {
+            return await carregarUmaVez(tentativa ? `${src}?t=${tentativa}` : src);
+          } catch (e) {
+            if (tentativa >= 4) throw e;
+          }
+        }
+      }
+
+      const grade = document.getElementById('grade');
+      function exibir(canvas, legenda, acerto) {
+        if (!mostrar) return;
+        const fig = document.createElement('figure');
+        const cap = document.createElement('figcaption');
+        cap.textContent = legenda;
+        cap.className = acerto ? 'ok' : 'erro';
+        fig.append(canvas, cap);
+        grade.append(fig);
+      }
+
+      const resumo = {};
+      const linhas = [];
+      try {
+        for (const cat of ['ACESSIBILIDADE', 'OBSTACULO', 'ALAGAMENTO']) {
+          if (filtro && filtro !== cat) continue;
+          // VP/FN/VN/FP usam isValid (= CONFIRMADO). "rejeitados" conta fotos
+          // reais recusadas pela pré-validação — o ideal é 0.
+          const r = { dataset: nomeDataset, conjunto, total: 0, VP: 0, FN: 0, VN: 0, FP: 0, rejeitados: [], status: {}, erros: [] };
+          const casos = casosDe(cat);
+          r.total = casos.length;
+          if (!casos.length) {
+            r.acuracia = null;
+            resumo[cat] = r;
+            continue;
+          }
+          for (const [arquivo, esperado] of casos) {
+            const img = await carregar(dir + arquivo);
+            const res = await analisarImagem(img, cat);
+            const acerto = res.isValid === esperado;
+            r[esperado ? (acerto ? 'VP' : 'FN') : acerto ? 'VN' : 'FP']++;
+            r.status[res.status] = (r.status[res.status] ?? 0) + 1;
+            if (res.status === 'REJEITADO') r.rejeitados.push(`${arquivo} ${res.motivos}`);
+            const resumoDet = JSON.stringify(res.detalhes, (k, v) => (k === 'anonimizacao' || k === 'evidencias' ? undefined : v));
+            if (!acerto) r.erros.push(`${esperado ? 'FN' : 'FP'} ${arquivo} ${resumoDet}`);
+            linhas.push(`${cat} ${acerto ? 'ok  ' : 'ERRO'} ${arquivo} esperado=${esperado} obtido=${res.isValid} ${resumoDet}`);
+            exibir(res.processedCanvas, `${acerto ? '✔' : '✘'} ${cat} ${arquivo} → ${res.isValid}`, acerto);
+          }
+          r.acuracia = Number(((r.VP + r.VN) / casos.length).toFixed(3));
+          resumo[cat] = r;
+        }
+
+        if (filtro === 'QUALIDADE') {
+          // Variantes degradadas geradas com filtros de canvas.
+          const variante = (img, filtroCss, escala = 1, jpeg = null) => {
+            const c = document.createElement('canvas');
+            c.width = Math.round(img.naturalWidth * escala);
+            c.height = Math.round(img.naturalHeight * escala);
+            const ctx = c.getContext('2d');
+            ctx.filter = filtroCss;
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            if (!jpeg) return Promise.resolve(c);
+            return new Promise((ok) => c.toBlob((b) => carregarUmaVez(URL.createObjectURL(b)).then(ok), 'image/jpeg', jpeg));
+          };
+          const unicos = [...new Set(['ACESSIBILIDADE', 'OBSTACULO', 'ALAGAMENTO'].flatMap((c) => [...manifest[c].positivos, ...manifest[c].negativos]))];
+          const q = { originaisRejeitados: [], degradadasAceitas: [], dupDetectadas: 0, dupPerdidas: [], colisoes: [], metricas: [] };
+          const hashes = [];
+          for (const arquivo of unicos) {
+            const img = await carregar(dir + arquivo);
+            const res = await analisarImagem(img, 'ALAGAMENTO');
+            q.metricas.push(`${arquivo} ${JSON.stringify(res.detalhes.qualidade)}`);
+            if (res.status === 'REJEITADO') q.originaisRejeitados.push(`${arquivo} ${res.motivos}`);
+            hashes.push([arquivo, res.hash]);
+
+            for (const [nome, f] of [['blur3', 'blur(3px)'], ['blur6', 'blur(6px)'], ['escura', 'brightness(0.15)'], ['clara', 'brightness(3.5)']]) {
+              const v = await variante(img, f);
+              const rv = await analisarImagem(v, 'ALAGAMENTO');
+              q.metricas.push(`  ${nome} ${rv.status} ${rv.motivos} ${JSON.stringify(rv.detalhes.qualidade)}`);
+              if (rv.status !== 'REJEITADO') q.degradadasAceitas.push(`${arquivo}:${nome}`);
+            }
+            // Mesma foto reduzida a 60% e recomprimida (JPEG 0,6) = reenvio.
+            const reenvio = await variante(img, 'none', 0.6, 0.6);
+            const rd = await analisarImagem(reenvio, 'ALAGAMENTO', { hashesAnteriores: [res.hash] });
+            if (rd.motivos.includes('DUPLICATA')) q.dupDetectadas++;
+            else q.dupPerdidas.push(`${arquivo} dist=${rd.detalhes.duplicata.distanciaMinima}`);
+          }
+          // Fotos diferentes não podem colidir.
+          const { distanciaHamming } = await import('./src/vision/VisionPipeline.js');
+          const limiar = CONFIG.QUALIDADE.DUPLICATA_DIST_MAX;
+          let menor = 64;
+          for (let i = 0; i < hashes.length; i++) {
+            for (let j = i + 1; j < hashes.length; j++) {
+              const d = distanciaHamming(hashes[i][1], hashes[j][1]);
+              menor = Math.min(menor, d);
+              if (d <= limiar) q.colisoes.push(`${hashes[i][0]}~${hashes[j][0]} d=${d}`);
+            }
+          }
+          q.menorDistanciaEntreFotosDiferentes = menor;
+          q.total = unicos.length;
+          linhas.push(...q.metricas);
+          delete q.metricas;
+          resumo.QUALIDADE = q;
+        }
+
+        if (filtro === 'PLACAS') {
+          // Composição sintética: placa real (close do Commons) colada, pequena e
+          // girada, sobre foto de rua. Como a posição é conhecida, mede-se se o
+          // borrão LGPD cobre a placa. Falsos positivos: fotos de rua sem placa.
+          const placas = manifest.PLACAS ?? [];
+          const fundos = manifest.FUNDOS_PLACA ?? [];
+          const pad = CONFIG.LGPD.PADDING;
+          const cobertura = (gt, regioes, W, H) => {
+            let dentro = 0, total = 0;
+            for (let i = 0; i < 20; i++) for (let j = 0; j < 20; j++) {
+              const px = gt.x + ((i + 0.5) / 20) * gt.w, py = gt.y + ((j + 0.5) / 20) * gt.h;
+              total++;
+              if (regioes.some((r) => {
+                const x0 = (r.x - r.width * pad) / W, x1 = (r.x + r.width * (1 + pad)) / W;
+                const y0 = (r.y - r.height * pad) / H, y1 = (r.y + r.height * (1 + pad)) / H;
+                return px >= x0 && px <= x1 && py >= y0 && py <= y1;
+              })) dentro++;
+            }
+            return dentro / total;
+          };
+          const pl = { composicoes: 0, cobertas: 0, perdidas: [], fpFotos: 0, fpRegioes: 0, fpArea: 0, totalFundos: 0 };
+          let k = 0;
+          for (const arqPlaca of placas) {
+            const imgPlaca = await carregar(dir + arqPlaca);
+            for (const [frac, ang] of [[0.1, -6], [0.14, 0], [0.2, 5]]) {
+              const fundo = await carregar(dir + fundos[k++ % fundos.length]);
+              const W = fundo.naturalWidth, H = fundo.naturalHeight;
+              const c = document.createElement('canvas');
+              c.width = W; c.height = H;
+              const ctx = c.getContext('2d');
+              ctx.drawImage(fundo, 0, 0);
+              const pw = W * frac, ph = pw * (imgPlaca.naturalHeight / imgPlaca.naturalWidth);
+              const cx = W * (0.3 + 0.4 * ((k * 37) % 10) / 10), cy = H * (0.6 + 0.25 * ((k * 53) % 10) / 10);
+              ctx.save(); ctx.translate(cx, cy); ctx.rotate((ang * Math.PI) / 180);
+              ctx.drawImage(imgPlaca, -pw / 2, -ph / 2, pw, ph); ctx.restore();
+              const a = Math.abs((ang * Math.PI) / 180);
+              const bw = pw * Math.cos(a) + ph * Math.sin(a), bh = pw * Math.sin(a) + ph * Math.cos(a);
+              const gt = { x: (cx - bw / 2) / W, y: (cy - bh / 2) / H, w: bw / W, h: bh / H };
+              const res = await analisarImagem(c, 'ALAGAMENTO');
+              const reg = res.detalhes.anonimizacao.regioes;
+              const cob = cobertura(gt, reg, res.processedCanvas.width, res.processedCanvas.height);
+              pl.composicoes++;
+              if (cob >= 0.8) pl.cobertas++; else pl.perdidas.push(`${arqPlaca} ${Math.round(frac * 100)}% ${ang}° cob=${cob.toFixed(2)}`);
+              linhas.push(`PLACA ${arqPlaca} larg=${frac} ang=${ang} cobertura=${cob.toFixed(2)} fontes=${[...new Set(reg.map((r) => r.fonte))]}`);
+              exibir(res.processedCanvas, `${cob >= 0.8 ? '✔' : '✘'} ${arqPlaca} ${Math.round(frac * 100)}% ${ang}° → ${cob.toFixed(2)}`, cob >= 0.8);
+            }
+          }
+          const rua = [...new Set(['ACESSIBILIDADE', 'OBSTACULO', 'ALAGAMENTO'].flatMap((c) => [...manifest[c].positivos, ...manifest[c].negativos]))];
+          for (const arquivo of rua) {
+            const res = await analisarImagem(await carregar(dir + arquivo), 'ALAGAMENTO');
+            const W = res.processedCanvas.width, H = res.processedCanvas.height;
+            const placasFalsas = res.detalhes.anonimizacao.regioes.filter((r) => r.tipo === 'PLACA');
+            pl.totalFundos++;
+            if (placasFalsas.length) {
+              pl.fpFotos++;
+              pl.fpRegioes += placasFalsas.length;
+              pl.fpArea += placasFalsas.reduce((s, r) => s + (r.width * r.height) / (W * H), 0);
+              linhas.push(`FP ${arquivo} ${placasFalsas.map((r) => `${r.fonte}@${Math.round((100 * r.width * r.height) / (W * H))}%`).join(' ')}`);
+              exibir(res.processedCanvas, `FP ${arquivo} (${placasFalsas.length})`, false);
+            }
+          }
+          pl.fpArea = Number((pl.fpArea / pl.totalFundos).toFixed(4)); // área média borrada por engano
+          resumo.PLACAS = pl;
+        }
+
+        if (filtro === 'CENA') {
+          const rua = [...new Set(['ACESSIBILIDADE', 'OBSTACULO', 'ALAGAMENTO'].flatMap((c) => [...manifest[c].positivos, ...manifest[c].negativos]))];
+          const grupos = [['RUA', rua], ['FORA', manifest.FORA_DE_CONTEXTO ?? []]];
+          const cn = { RUA: [], FORA: [] };
+          for (const [grupo, lista] of grupos) {
+            for (const arquivo of lista) {
+              const img = await carregar(dir + arquivo);
+              const res = await analisarImagem(img, 'ACESSIBILIDADE');
+              cn[grupo].push({ arquivo, status: res.status, motivos: res.motivos, ...res.detalhes.cena });
+            }
+          }
+          resumo.CENA = { rejeitadosRua: cn.RUA.filter((x) => x.status === 'REJEITADO').map((x) => `${x.arquivo} ${x.motivos}`), rejeitadosFora: cn.FORA.filter((x) => x.status === 'REJEITADO').length, totalFora: cn.FORA.length };
+          for (const [g, l] of Object.entries(cn)) for (const x of l) linhas.push(`${g} ${JSON.stringify(x)}`);
+        }
+
+        if (manifest.RETRATOS && (!filtro || filtro === 'RETRATOS')) {
+          const rt = [];
+          for (const arquivo of manifest.RETRATOS) {
+            const img = await carregar(dir + arquivo);
+            const res = await analisarImagem(img, 'ACESSIBILIDADE');
+            rt.push(`${arquivo}: ${res.status} ${res.motivos} rosto=${res.detalhes.fracaoRosto}`);
+            exibir(res.processedCanvas, `RETRATO ${arquivo} → ${res.status}`, res.status === 'REJEITADO');
+          }
+          resumo.RETRATOS = rt;
+        }
+
+        if (!filtro || filtro === 'LGPD') {
+          const lg = [];
+          for (const arquivo of manifest.LGPD) {
+            const img = await carregar(dir + arquivo);
+            const res = await analisarImagem(img, 'ALAGAMENTO');
+            const regioes = res.detalhes.anonimizacao.regioes;
+            lg.push(`${arquivo}: ${regioes.length} região(ões) ${regioes.map((g) => `${g.tipo}@${g.x},${g.y} ${g.width}x${g.height}`).join(' ')}`);
+            exibir(res.processedCanvas, `LGPD ${arquivo} → ${regioes.length}`, regioes.length > 0);
+          }
+          resumo.LGPD = lg;
+        }
+
+        document.getElementById('tabelas').innerHTML = Object.entries(resumo)
+          .filter(([, v]) => v && v.acuracia != null)
+          .map(([k, v]) => `<table><caption>${k} — acurácia ${v.acuracia}</caption><tr><th>VP</th><th>FN</th><th>VN</th><th>FP</th></tr><tr><td>${v.VP}</td><td>${v.FN}</td><td>${v.VN}</td><td>${v.FP}</td></tr></table>`)
+          .join('');
+        document.getElementById('out').textContent = JSON.stringify(resumo, null, 1) + '\n\n' + linhas.join('\n') + '\nFIM';
+      } catch (e) {
+        document.getElementById('out').textContent = 'ERRO: ' + e.message + '\n' + e.stack;
+      }
+    </script>
+  </body>
+</html>
