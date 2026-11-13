@@ -49,9 +49,30 @@ variable "github_environment" {
 }
 
 variable "app_service_sku" {
-  description = "SKU do App Service Plan Linux. B1 é o menor com Always On e health check."
+  description = <<-EOT
+    SKU do App Service Plan Linux.
+    F1 (padrão): gratuito; 60 min de CPU/dia, sem Always On (cold start) e sem SLA.
+    B1: ~US$ 0,02/h em brazilsouth (~US$ 14,60/mês); use só se o F1 não atender.
+  EOT
   type        = string
-  default     = "B1"
+  default     = "F1"
+
+  validation {
+    condition     = contains(["F1", "B1", "B2", "S1"], var.app_service_sku)
+    error_message = "app_service_sku deve ser F1, B1, B2 ou S1."
+  }
+}
+
+variable "orcamento_mensal_usd" {
+  description = "Orçamento mensal da assinatura (USD). Alertas em 50%, 80% e 100% do gasto real e 100% do previsto."
+  type        = number
+  default     = 10
+}
+
+variable "emails_alerta_custo" {
+  description = "E-mails que recebem os alertas de orçamento (além dos Owners da assinatura)."
+  type        = list(string)
+  default     = []
 }
 
 variable "admin_cidrs" {
@@ -79,9 +100,9 @@ variable "log_retention_days" {
 }
 
 variable "log_daily_quota_gb" {
-  description = "Teto diário de ingestão de logs, para controlar custo."
+  description = "Teto diário de ingestão de logs. 0,1 GB/dia (~3 GB/mês) fica dentro dos 5 GB/mês gratuitos."
   type        = number
-  default     = 1
+  default     = 0.1
 }
 
 variable "tags" {

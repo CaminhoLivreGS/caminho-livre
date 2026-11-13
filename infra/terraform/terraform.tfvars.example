@@ -4,6 +4,13 @@
 subscription_id = "00000000-0000-0000-0000-000000000000"
 location        = "brazilsouth"
 
+# Custo: F1 é gratuito. Troque para "B1" (~US$ 14,60/mês) só se o F1 não atender.
+app_service_sku = "F1"
+
+# Alertas de orçamento (USD/mês) para estes e-mails, além dos Owners.
+orcamento_mensal_usd = 10
+emails_alerta_custo  = ["seu-email@exemplo.com"]
+
 # Opcional: seu IP público para acessar o SCM/Kudu (SSH do App Service).
 # Descubra com: curl -s https://api.ipify.org
 # NUNCA use 0.0.0.0/0 (a validação rejeita).

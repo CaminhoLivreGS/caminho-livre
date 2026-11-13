@@ -90,7 +90,8 @@ resource "azurerm_linux_web_app" "principal" {
   }
 
   site_config {
-    always_on           = true
+    # O plano gratuito (F1) não oferece Always On.
+    always_on           = var.app_service_sku != "F1"
     http2_enabled       = true
     minimum_tls_version = "1.2"
     ftps_state          = "Disabled"

@@ -38,6 +38,7 @@ provider "azurerm" {
   # podem não ter permissão para o conjunto padrão).
   resource_provider_registrations = "none"
   resource_providers_to_register = [
+    "Microsoft.Consumption",
     "Microsoft.ContainerRegistry",
     "Microsoft.Insights",
     "Microsoft.ManagedIdentity",
