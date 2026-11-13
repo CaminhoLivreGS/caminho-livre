@@ -1,0 +1,17 @@
+# Copie para terraform.tfvars (ignorado pelo git) e preencha.
+# Descubra a assinatura com: az account show --query id -o tsv
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+location        = "brazilsouth"
+
+# Custo: F1 é gratuito. Troque para "B1" (~US$ 14,60/mês) só se o F1 não atender.
+app_service_sku = "F1"
+
+# Alertas de custo (USD/mês) e de operação (Métricas de Ouro) para estes e-mails.
+orcamento_mensal_usd = 10
+emails_alerta  = ["seu-email@exemplo.com"]
+
+# Opcional: seu IP público para acessar o SCM/Kudu (SSH do App Service).
+# Descubra com: curl -s https://api.ipify.org
+# NUNCA use 0.0.0.0/0 (a validação rejeita).
+admin_cidrs = []

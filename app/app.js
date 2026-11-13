@@ -16,7 +16,7 @@ const ENDPOINT_DENUNCIAS = null;
 
 const analisador = new AnalisadorVisao({
   // Arquivos de public/ ficam na raiz do site, tanto no `vite dev` quanto no build (dist/).
-  opencvUrl: './opencv/opencv.js',
+  // O OpenCV vem empacotado no worker de visão (não há opencvUrl).
   config: { LGPD: { CASCADE_BASE_URL: './cascades/' } },
 });
 

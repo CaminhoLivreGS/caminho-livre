@@ -1,0 +1,87 @@
+# Testes unitários das regras de alerta: promtool test rules <este arquivo>
+rule_files:
+  - ../regras/alertas.yml
+
+evaluation_interval: 15s
+
+tests:
+  # Erros: sonda falhando por mais de 2 min dispara; por 1 min não dispara.
+  - interval: 15s
+    input_series:
+      - series: 'probe_success{job="blackbox-http", instance="https://app.azurewebsites.net/healthz", ambiente="azure"}'
+        values: "1x4 0x20"
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: AplicacaoIndisponivel
+        exp_alerts: []
+      - eval_time: 4m
+        alertname: AplicacaoIndisponivel
+        exp_alerts:
+          - exp_labels:
+              severidade: critica
+              sinal: erros
+              job: blackbox-http
+              instance: https://app.azurewebsites.net/healthz
+              ambiente: azure
+            exp_annotations:
+              resumo: "Caminho Livre fora do ar (azure)"
+              descricao: "A sonda em https://app.azurewebsites.net/healthz falha há mais de 2 minutos."
+
+  # Erros: status 503 por mais de 1 min.
+  - interval: 15s
+    input_series:
+      - series: 'probe_http_status_code{job="blackbox-http", instance="https://app.azurewebsites.net/", ambiente="azure"}'
+        values: "200x4 503x12"
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ErroHTTP5xx
+        exp_alerts:
+          - exp_labels:
+              severidade: critica
+              sinal: erros
+              job: blackbox-http
+              instance: https://app.azurewebsites.net/
+              ambiente: azure
+            exp_annotations:
+              resumo: "Resposta 5xx em https://app.azurewebsites.net/"
+              descricao: "Status HTTP 503 há mais de 1 minuto."
+
+  # Latência: 3 s sustentados disparam; 0,4 s não.
+  - interval: 1m
+    input_series:
+      - series: 'probe_duration_seconds{job="blackbox-http", instance="https://lento", ambiente="azure"}'
+        values: "3x20"
+      - series: 'probe_duration_seconds{job="blackbox-http", instance="https://rapido", ambiente="azure"}'
+        values: "0.4x20"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: LatenciaAlta
+        exp_alerts:
+          - exp_labels:
+              severidade: alerta
+              sinal: latencia
+              job: blackbox-http
+              instance: https://lento
+              ambiente: azure
+            exp_annotations:
+              resumo: "Latência alta em https://lento"
+              descricao: "Tempo médio de resposta de 3s nos últimos 5 minutos (limite: 2 s)."
+
+  # Saturação: 250 conexões ativas por 6 min.
+  - interval: 1m
+    input_series:
+      - series: 'nginx_connections_active{job="nginx", instance="nginx-exporter:9113", ambiente="local"}'
+        values: "10 250x10"
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: SaturacaoConexoesNginx
+        exp_alerts:
+          - exp_labels:
+              severidade: alerta
+              sinal: saturacao
+              job: nginx
+              instance: nginx-exporter:9113
+              ambiente: local
+            exp_annotations:
+              resumo: "Muitas conexões ativas no nginx (local)"
+              descricao: "250 conexões ativas há mais de 5 minutos (limite: 200)."

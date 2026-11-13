@@ -6,8 +6,8 @@
 #
 # Todas as portas ficam presas em 127.0.0.1 (nada exposto na rede local).
 # A câmera exige contexto seguro; http://localhost já é considerado seguro.
-# Segredos (ex.: senha do Grafana) vêm do arquivo .env, que NÃO é versionado.
-# Os arquivos de observability/ são entregues no passo de Observabilidade.
+# A senha do Grafana é um Docker secret (observability/grafana/admin-password, fora do git).
+# Para sondar a URL do Azure: sh infra/scripts/configurar-observabilidade.sh
 # =============================================================================
 
 name: caminho-livre
@@ -51,12 +51,12 @@ services:
     networks: [frontend, monitoring]
 
   # ---------------------------------------------------------------------------
-  # Observabilidade (profile opcional)
+  # Observabilidade (profile opcional): Métricas de Ouro
   # ---------------------------------------------------------------------------
   nginx-exporter:
     <<: *hardening
     profiles: [observability]
-    image: nginx/nginx-prometheus-exporter:1.4.0
+    image: nginx/nginx-prometheus-exporter:1.5.3
     container_name: caminho-livre-nginx-exporter
     command:
       - --nginx.scrape-uri=http://app:8081/stub_status
@@ -66,10 +66,23 @@ services:
         condition: service_healthy
     networks: [monitoring]          # sem porta publicada: só o Prometheus acessa
 
+  blackbox:
+    <<: *hardening
+    profiles: [observability]
+    image: prom/blackbox-exporter:v0.29.1
+    container_name: caminho-livre-blackbox
+    command:
+      - --config.file=/etc/blackbox/blackbox.yml
+    read_only: true
+    volumes:
+      - ./observability/blackbox:/etc/blackbox:ro
+    # frontend: saída para sondar a URL pública no Azure; sem porta publicada.
+    networks: [frontend, monitoring]
+
   prometheus:
     <<: *hardening
     profiles: [observability]
-    image: prom/prometheus:v3.1.0
+    image: prom/prometheus:v3.16.0
     container_name: caminho-livre-prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -81,29 +94,37 @@ services:
       - prometheus-data:/prometheus
     ports:
       - "127.0.0.1:9090:9090"
-    depends_on: [nginx-exporter]
-    # frontend: porta publicada + saída para consultar a URL do Azure
+    depends_on: [nginx-exporter, blackbox]
     networks: [frontend, monitoring]
 
   grafana:
     <<: *hardening
     profiles: [observability]
-    image: grafana/grafana:11.4.0
+    image: grafana/grafana:13.3.1
     container_name: caminho-livre-grafana
     environment:
       GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER:-admin}
-      # Obrigatória: o compose falha se não estiver definida no .env.
-      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD:?defina GF_ADMIN_PASSWORD no .env}
+      # Senha via Docker secret (arquivo fora do git), nunca em variável/código.
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/json/metricas-de-ouro.json
     volumes:
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana-data:/var/lib/grafana
+    secrets: [grafana_admin_password]
     ports:
       - "127.0.0.1:3000:3000"
     depends_on: [prometheus]
     networks: [frontend, monitoring]
+
+secrets:
+  # Crie antes de subir a observabilidade (o arquivo é ignorado pelo git):
+  #   openssl rand -base64 24 > observability/grafana/admin-password
+  grafana_admin_password:
+    file: ./observability/grafana/admin-password
 
 networks:
   frontend:
