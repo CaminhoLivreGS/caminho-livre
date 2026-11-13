@@ -1,0 +1,44 @@
+# Mantém o contexto de build pequeno e impede que segredos entrem na imagem.
+
+# Segredos e estado de infraestrutura (NUNCA na imagem)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+infra/
+
+# Controle de versão e CI
+.git/
+.github/
+.gitignore
+
+# Dependências e artefatos locais (recriados no build)
+node_modules/
+dist/
+public/opencv/
+public/cascades/
+*.log
+
+# Ferramentas de dev / dataset (não vão para produção)
+dataset/
+test/
+avaliacao.html
+observability/
+docs/
+
+# Arquivos de container (não precisam estar dentro da imagem)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# SO / editores
+.DS_Store
+.vscode/
+.idea/
+.kiro/
