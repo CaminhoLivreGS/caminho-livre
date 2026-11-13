@@ -22,7 +22,7 @@ resource "azurerm_consumption_budget_subscription" "mensal" {
       threshold      = tonumber(notification.key)
       threshold_type = notification.value
       operator       = "GreaterThanOrEqualTo"
-      contact_emails = var.emails_alerta_custo
+      contact_emails = var.emails_alerta
       contact_roles  = ["Owner"]
     }
   }
@@ -33,7 +33,7 @@ resource "azurerm_consumption_budget_subscription" "mensal" {
     threshold      = 100
     threshold_type = "Forecasted"
     operator       = "GreaterThanOrEqualTo"
-    contact_emails = var.emails_alerta_custo
+    contact_emails = var.emails_alerta
     contact_roles  = ["Owner"]
   }
 

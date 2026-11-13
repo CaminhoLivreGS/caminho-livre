@@ -5,6 +5,7 @@
 #        │
 #        ├── test ──────────┐   testes unitários + build do Vite
 #        ├── terraform ─────┤   IaC: fmt + validate
+#        ├── observabilidade┤   Prometheus: config + testes de alerta
 #        ├── gitleaks ──────┤   segredos no histórico git
 #        ├── semgrep ───────┤   SAST (risco ALTO/CRÍTICO bloqueia)
 #        └── trivy ─────────┤   CVEs HIGH/CRITICAL na imagem + IaC (bloqueia)
@@ -109,6 +110,32 @@ jobs:
 
       - name: Validate
         run: terraform validate
+
+  # ---------------------------------------------------------------------------
+  # Observabilidade: config do Prometheus, regras e testes unitários de alerta
+  # ---------------------------------------------------------------------------
+  observabilidade:
+    name: "Observabilidade: Prometheus (config + testes de alerta)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: promtool check config / check rules / test rules
+        run: |
+          set -euo pipefail
+          # Mesma versão do docker-compose; caminhos iguais aos do container.
+          docker run --rm --entrypoint sh \
+            -v "$PWD/observability/prometheus:/etc/prometheus:ro" \
+            prom/prometheus:v3.16.0 -c '
+              promtool check config /etc/prometheus/prometheus.yml &&
+              promtool check rules /etc/prometheus/regras/alertas.yml &&
+              cd /etc/prometheus/testes && promtool test rules alertas.test.yml'
+
+      - name: Dashboard do Grafana é JSON válido
+        run: python3 -m json.tool observability/grafana/provisioning/dashboards/json/metricas-de-ouro.json > /dev/null
 
   # ---------------------------------------------------------------------------
   # Segurança 1/3 - Gitleaks: segredos em todo o histórico
@@ -339,13 +366,14 @@ jobs:
     name: "Gate de segurança"
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    needs: [test, terraform, gitleaks, semgrep, trivy]
+    needs: [test, terraform, observabilidade, gitleaks, semgrep, trivy]
     if: always()
     steps:
       - name: Avaliar resultados
         env:
           TEST: ${{ needs.test.result }}
           TERRAFORM: ${{ needs.terraform.result }}
+          OBSERVABILIDADE: ${{ needs.observabilidade.result }}
           GITLEAKS: ${{ needs.gitleaks.result }}
           SEMGREP: ${{ needs.semgrep.result }}
           TRIVY: ${{ needs.trivy.result }}
@@ -358,12 +386,13 @@ jobs:
             echo "|---|---|"
             echo "| Testes e build | $(icone "$TEST") |"
             echo "| Terraform (fmt + validate) | $(icone "$TERRAFORM") |"
+            echo "| Observabilidade (Prometheus) | $(icone "$OBSERVABILIDADE") |"
             echo "| Gitleaks (segredos) | $(icone "$GITLEAKS") |"
             echo "| Semgrep (SAST) | $(icone "$SEMGREP") |"
             echo "| Trivy (imagem + IaC) | $(icone "$TRIVY") |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          for r in "$TEST" "$TERRAFORM" "$GITLEAKS" "$SEMGREP" "$TRIVY"; do
+          for r in "$TEST" "$TERRAFORM" "$OBSERVABILIDADE" "$GITLEAKS" "$SEMGREP" "$TRIVY"; do
             if [ "$r" != "success" ]; then
               echo "**🚫 DEPLOY BLOQUEADO:** corrija os achados acima." >> "$GITHUB_STEP_SUMMARY"
               echo "::error::Gate de segurança reprovado. Deploy bloqueado."

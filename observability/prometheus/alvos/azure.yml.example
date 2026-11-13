@@ -1,0 +1,7 @@
+# Sondas da aplicação no Azure. Gerado por infra/scripts/configurar-observabilidade.sh
+# a partir do output app_url do Terraform (o arquivo azure.yml não é versionado).
+- targets:
+    - https://app-caminholivre-prod-xxxxxx.azurewebsites.net/healthz
+    - https://app-caminholivre-prod-xxxxxx.azurewebsites.net/
+  labels:
+    ambiente: azure

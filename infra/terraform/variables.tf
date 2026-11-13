@@ -69,10 +69,33 @@ variable "orcamento_mensal_usd" {
   default     = 10
 }
 
-variable "emails_alerta_custo" {
-  description = "E-mails que recebem os alertas de orçamento (além dos Owners da assinatura)."
+variable "emails_alerta" {
+  description = "E-mails que recebem os alertas de custo (budget) e de operação (Métricas de Ouro)."
   type        = list(string)
   default     = []
+
+  validation {
+    condition     = alltrue([for e in var.emails_alerta : can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", e))])
+    error_message = "emails_alerta deve conter só endereços de e-mail válidos."
+  }
+}
+
+variable "alerta_5xx_max" {
+  description = "Alerta de erros: máximo de respostas 5xx aceitas em 5 minutos."
+  type        = number
+  default     = 5
+}
+
+variable "alerta_latencia_s" {
+  description = "Alerta de latência: tempo médio de resposta máximo (segundos) em 5 minutos."
+  type        = number
+  default     = 2
+}
+
+variable "alerta_cpu_segundos" {
+  description = "Alerta de saturação: segundos de CPU máximos em 15 minutos."
+  type        = number
+  default     = 60
 }
 
 variable "admin_cidrs" {
