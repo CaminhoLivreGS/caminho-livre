@@ -10,7 +10,9 @@
 # Custo: sem mensalidade no SKU standard; US$ 0,03 a cada 10 mil operações.
 # =============================================================================
 
-resource "azurerm_key_vault" "principal" {
+# Purge protection desligada de propósito (risco aceito, mesma justificativa do
+# AZU-0016 no .trivyignore): ciclo destruir/recriar entre avaliações.
+resource "azurerm_key_vault" "principal" { # nosemgrep: terraform.azure.security.keyvault.keyvault-purge-enabled.keyvault-purge-enabled
   name                = "kv-${var.projeto}-${local.sufixo}"
   location            = azurerm_resource_group.principal.location
   resource_group_name = azurerm_resource_group.principal.name
