@@ -80,7 +80,9 @@ resource "azurerm_key_vault_secret" "appinsights_connection_string" {
   key_vault_id = azurerm_key_vault.principal.id
   content_type = "text/plain"
 
-  # Write-only: o valor vai para o cofre, mas nunca é gravado no tfstate.
+  # Write-only: este recurso não grava o valor no tfstate. A connection string
+  # ainda consta no estado como atributo do azurerm_application_insights, por
+  # isso o tfstate é restrito (Entra ID, sem chaves, RBAC).
   # Para trocar o valor, incremente value_wo_version.
   value_wo         = azurerm_application_insights.principal.connection_string
   value_wo_version = 1

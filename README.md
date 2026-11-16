@@ -7,6 +7,8 @@ App colaborativo de acessibilidade urbana para pedestres com deficiência e mobi
 Trabalho da disciplina **Secure DevOps Tools & Cloud Computing**, FIAP.
 **Integrantes:** Gilson Dias, Gabriel de Mendonça e Isabelle Toricelli.
 
+📄 **Relatório completo da entrega (PDF):** [`docs/entrega/Caminho-Livre-Relatorio.pdf`](docs/entrega/Caminho-Livre-Relatorio.pdf), com diagrama, custos, LGPD, riscos aceitos e evidências.
+
 ## Ficha técnica do MVP
 
 | Item | Descrição |
@@ -112,7 +114,7 @@ flowchart LR
 | Azure Container Registry (Basic) | Sem usuário admin e sem pull anônimo; acesso só por RBAC |
 | App Service Plan Linux (F1) + Web App for Containers | HTTPS obrigatório, TLS 1.2+, FTP e WebDeploy com senha desligados, health check em `/healthz` |
 | Identidade gerenciada do Web App | Papel `AcrPull` no ACR (sem senha de registry) |
-| **Key Vault** (standard) | Autorização só por RBAC. Guarda a connection string do Application Insights, que o Web App lê por *Key Vault Reference* com a identidade gerenciada. O segredo é gravado como **write-only** (`value_wo`): o valor nunca entra no tfstate |
+| **Key Vault** (standard) | Autorização só por RBAC. Guarda a connection string do Application Insights, que o Web App lê por *Key Vault Reference* com a identidade gerenciada. O segredo é gravado como **write-only** (`value_wo`), então o recurso do segredo não guarda o valor no tfstate. A mesma connection string ainda aparece no estado como atributo do próprio Application Insights, por isso o tfstate é protegido: só Entra ID, sem chaves, acesso por RBAC |
 | Papéis da identidade de deploy | `AcrPush` e `Reader` no ACR e `Website Contributor` no Web App |
 | Log Analytics + Application Insights | Retenção de 30 dias, teto de 0,1 GB/dia, IP mascarado |
 | Alertas e Workbook | Ver [Pilar 3](#pilar-3-observabilidade) |
@@ -247,7 +249,7 @@ O Azure App Service é um serviço **PaaS**: a Microsoft opera a plataforma e a 
 | Certificado TLS do domínio `*.azurewebsites.net` | ✅ | | |
 | **Imagem do container** (SO base, pacotes, nginx) | | ✅ | Trivy bloqueia CVEs HIGH/CRITICAL; `apk upgrade` no build; base Alpine atualizada |
 | **Código da aplicação** | | ✅ | Semgrep (SAST), testes unitários, revisão por PR |
-| **Segredos e credenciais** | Fornece o Key Vault (armazenamento criptografado, disponibilidade, controle de acesso) | ✅ | Arquitetura sem segredos de longa duração (OIDC, identidade gerenciada, ACR sem admin); Key Vault por RBAC com segredo write-only; Gitleaks no histórico; GitHub Secrets |
+| **Segredos e credenciais** | Fornece o Key Vault (armazenamento criptografado, disponibilidade, controle de acesso) | ✅ | Arquitetura sem segredos de longa duração (OIDC, identidade gerenciada, ACR sem admin); Key Vault por RBAC com segredo write-only; tfstate só com Entra ID; Gitleaks no histórico; GitHub Secrets |
 | **Identidade e acesso** (RBAC) | Fornece o Entra ID e o RBAC | ✅ Configura | Menor privilégio: `AcrPull`, `AcrPush`, `Website Contributor` restritos ao recurso |
 | **Configuração de rede e exposição** | Fornece os controles | ✅ Configura | HTTPS obrigatório, TLS 1.2, SCM/SSH negado por padrão, sem `0.0.0.0/0` |
 | **Dados e privacidade (LGPD)** | Protege a infraestrutura onde os dados ficam | ✅ | Anonimização no aparelho, IP mascarado no App Insights, retenção limitada |
@@ -280,6 +282,7 @@ Galeria completa, com a descrição de cada print: [`docs/evidencias/`](docs/evi
 | **Bloqueio automático** por vulnerabilidade | [PR #3, simulação de falha](https://github.com/CaminhoLivreGS/caminho-livre/pull/3), fechado sem merge. Gitleaks detecta o segredo falso ([print](docs/evidencias/01-pr3-gitleaks-segredo.png)); Semgrep aponta 2 achados ALTO, XSS e JWT fixo ([print](docs/evidencias/02-pr3-semgrep-xss.png), [print](docs/evidencias/03-pr3-semgrep-jwt-sem-deploy.png)); Trivy encontra **68 CVEs, 65 HIGH e 3 CRITICAL** ([print](docs/evidencias/05-trivy-68-cves.png)); o gate mostra "DEPLOY BLOQUEADO" ([print](docs/evidencias/04-gate-deploy-bloqueado.png)) e a proteção da `main` impede o merge. [Logs completos](docs/evidencias/logs-run-simulacao-43903627055.zip) |
 | Relatórios dos scanners | Aba Security → Code scanning e artefatos de cada execução |
 | Container non-root | Passo "Verificar usuário non-root" no job do Trivy (UID 101) |
+| Infraestrutura por pipeline, com aprovação | [Apply aprovado no environment `infra`](https://github.com/CaminhoLivreGS/caminho-livre/actions/runs/43956593526) ([print](docs/evidencias/15-infra-apply-aprovado.png)). O `terraform plan` roda automaticamente em PRs com a identidade de leitura |
 | tfstate remoto e `.tfvars` fora do git | Backend `azurerm` em [`infra/terraform/versions.tf`](infra/terraform/versions.tf); `*.tfstate`, `*.tfvars` e `backend.hcl` no [`.gitignore`](.gitignore) |
 | SSH/administração fechada | Verificado com a infra no ar: o SCM/Kudu respondeu **HTTP 403** a acessos pela internet (`scm_ip_restriction_default_action = "Deny"`; `admin_cidrs` rejeita `0.0.0.0/0`) |
 | Métricas de Ouro e alerta disparado | Azure Monitor: o alerta `disponibilidade` (Sev1) disparou enquanto o app respondia 503 e se resolveu sozinho após o deploy ([lista](docs/evidencias/08-azure-monitor-alertas.png), [detalhe](docs/evidencias/09-azure-alerta-disponibilidade.png)). Prometheus local: queda simulada com alerta em 2 minutos ([print](docs/evidencias/grafana-metricas-de-ouro-queda-simulada.png)) |

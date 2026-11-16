@@ -34,6 +34,10 @@ Logs completos dessa execução, guardados porque o GitHub apaga logs de Actions
 
 ![Run verde com deploy](06-run-verde-com-deploy.png)
 
+Infraestrutura criada pelo workflow *Infra (Terraform)*: o `apply` só rodou depois da aprovação manual no environment `infra` e disparou o deploy da aplicação:
+
+![Apply aprovado no environment infra](15-infra-apply-aprovado.png)
+
 Aplicação no ar em `https://app-caminholivre-prod-00e44e.azurewebsites.net`:
 
 ![App no ar no Azure](07-app-no-ar-azure.png)
