@@ -37,7 +37,9 @@ provider "azurerm" {
   # Registra só os resource providers usados aqui (assinaturas de estudante
   # podem não ter permissão para o conjunto padrão).
   resource_provider_registrations = "none"
+  # O bootstrap (infra/bootstrap/) registra e aguarda estes mesmos providers.
   resource_providers_to_register = [
+    "Microsoft.AlertsManagement",
     "Microsoft.Consumption",
     "Microsoft.ContainerRegistry",
     "Microsoft.Insights",

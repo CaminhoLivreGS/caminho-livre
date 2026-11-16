@@ -32,12 +32,18 @@ echo "Assinatura: $ASSINATURA"
 echo "Região:     $REGIAO"
 echo "Storage:    $CONTA (RG $RG)"
 
-# Assinaturas novas (ex.: Azure for Students) vêm sem o provider de Storage
-# registrado; sem isso a criação falha com "SubscriptionNotFound".
-if [ "$(az provider show --namespace Microsoft.Storage --query registrationState -o tsv)" != "Registered" ]; then
-  echo "Registrando o resource provider Microsoft.Storage (gratuito, ~1 min)..."
-  az provider register --namespace Microsoft.Storage --wait
-fi
+# Assinaturas novas (ex.: Azure for Students) vêm sem resource providers
+# registrados. Sem o Storage o bootstrap falha ("SubscriptionNotFound"); sem o
+# Insights o terraform apply falha nos recursos de monitoramento, porque o
+# provider do Terraform pede o registro mas não espera ele concluir.
+for provedor in Microsoft.Storage Microsoft.Web Microsoft.ContainerRegistry \
+  Microsoft.ManagedIdentity Microsoft.OperationalInsights Microsoft.Insights \
+  Microsoft.AlertsManagement Microsoft.Consumption; do
+  if [ "$(az provider show --namespace "$provedor" --query registrationState -o tsv)" != "Registered" ]; then
+    echo "Registrando o resource provider $provedor (gratuito, ~1 min)..."
+    az provider register --namespace "$provedor" --wait
+  fi
+done
 
 az group create --name "$RG" --location "$REGIAO" \
   --tags projeto=caminho-livre finalidade=terraform-state --output none
