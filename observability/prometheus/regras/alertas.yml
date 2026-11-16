@@ -1,0 +1,82 @@
+# =============================================================================
+# Regras de alerta (Prometheus) - Métricas de Ouro
+# Ver em http://127.0.0.1:9090/alerts. Os alertas do Azure Monitor, com
+# e-mail, estão em infra/terraform/observabilidade.tf.
+# =============================================================================
+groups:
+  - name: metricas-de-ouro
+    rules:
+      # ---- Erros / disponibilidade -----------------------------------------
+      - alert: AplicacaoIndisponivel
+        expr: probe_success{job="blackbox-http"} == 0
+        for: 2m
+        labels:
+          severidade: critica
+          sinal: erros
+        annotations:
+          resumo: "Caminho Livre fora do ar ({{ $labels.ambiente }})"
+          descricao: "A sonda em {{ $labels.instance }} falha há mais de 2 minutos."
+
+      - alert: ErroHTTP5xx
+        expr: probe_http_status_code{job="blackbox-http"} >= 500
+        for: 1m
+        labels:
+          severidade: critica
+          sinal: erros
+        annotations:
+          resumo: "Resposta 5xx em {{ $labels.instance }}"
+          descricao: "Status HTTP {{ $value }} há mais de 1 minuto."
+
+      # ---- Latência --------------------------------------------------------
+      - alert: LatenciaAlta
+        expr: avg_over_time(probe_duration_seconds{job="blackbox-http"}[5m]) > 2
+        for: 5m
+        labels:
+          severidade: alerta
+          sinal: latencia
+        annotations:
+          resumo: "Latência alta em {{ $labels.instance }}"
+          descricao: "Tempo médio de resposta de {{ $value | humanizeDuration }} nos últimos 5 minutos (limite: 2 s)."
+
+      # ---- Saturação -------------------------------------------------------
+      - alert: SaturacaoConexoesNginx
+        expr: nginx_connections_active > 200
+        for: 5m
+        labels:
+          severidade: alerta
+          sinal: saturacao
+        annotations:
+          resumo: "Muitas conexões ativas no nginx ({{ $labels.ambiente }})"
+          descricao: "{{ $value }} conexões ativas há mais de 5 minutos (limite: 200)."
+
+      # ---- Tráfego (anomalia) ----------------------------------------------
+      - alert: PicoDeTrafego
+        expr: sum(rate(nginx_http_requests_total[1m])) > 50
+        for: 5m
+        labels:
+          severidade: info
+          sinal: trafego
+        annotations:
+          resumo: "Pico de tráfego no nginx local"
+          descricao: "{{ $value | humanize }} req/s por mais de 5 minutos (limite: 50 req/s)."
+
+      # ---- Segurança operacional -------------------------------------------
+      - alert: CertificadoTLSExpirando
+        expr: (probe_ssl_earliest_cert_expiry{job="blackbox-http"} - time()) / 86400 < 14
+        for: 1h
+        labels:
+          severidade: alerta
+          sinal: erros
+        annotations:
+          resumo: "Certificado TLS expira em menos de 14 dias"
+          descricao: "{{ $labels.instance }}: {{ $value | humanize }} dias restantes."
+
+      - alert: ExporterFora
+        expr: up{job=~"nginx|blackbox"} == 0
+        for: 2m
+        labels:
+          severidade: alerta
+          sinal: erros
+        annotations:
+          resumo: "Coletor de métricas fora: {{ $labels.job }}"
+          descricao: "O Prometheus não consegue coletar {{ $labels.instance }}."

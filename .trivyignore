@@ -1,0 +1,13 @@
+# Riscos aceitos (Trivy). Cada exceção precisa de justificativa e revisão.
+# Revisar a cada release ou quando o backend de denúncias for implementado.
+
+# AZU-0003 - App Service sem autenticação (Easy Auth).
+# Aceito: o Caminho Livre é um app cidadão PÚBLICO; o conteúdo estático não
+# deve exigir login. A autenticação será exigida no backend de denúncias
+# (ver README, seção Segurança), não na SPA.
+AZU-0003
+
+# AZU-0001 - App Service sem certificado de cliente (mTLS).
+# Aceito: mTLS é para comunicação máquina-a-máquina; cidadãos acessam por
+# navegador comum, sem certificado de cliente.
+AZU-0001

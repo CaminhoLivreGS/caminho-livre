@@ -1,0 +1,6 @@
+# Sondas do app local (docker compose).
+- targets:
+    - http://app:8080/healthz
+    - http://app:8080/
+  labels:
+    ambiente: local

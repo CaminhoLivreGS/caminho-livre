@@ -21,6 +21,13 @@ dist/
 *.tfvars
 *.tfvars.json
 !*.tfvars.example
+backend.hcl
+tfplan
+# URL do Azure gerada por infra/scripts/configurar-observabilidade.sh
+observability/prometheus/alvos/azure.yml
+# Senha do admin do Grafana (Docker secret)
+observability/grafana/admin-password
+*.tfplan
 crash.log
 override.tf
 override.tf.json

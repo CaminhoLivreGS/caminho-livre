@@ -1,0 +1,52 @@
+# =============================================================================
+# Prometheus - Caminho Livre (stack local de observabilidade)
+#
+# Duas visões das Métricas de Ouro:
+#   - caixa-preta: Blackbox Exporter sonda a URL pública no Azure e o app local
+#     (latência, erros/disponibilidade, validade do certificado TLS);
+#   - caixa-branca: nginx-prometheus-exporter lê o stub_status do container
+#     local (tráfego e saturação de conexões).
+# As métricas de plataforma do Azure (Requests, Http5xx, HttpResponseTime,
+# CpuTime) ficam no Azure Monitor (ver infra/terraform/observabilidade.tf).
+# =============================================================================
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    projeto: caminho-livre
+
+rule_files:
+  - /etc/prometheus/regras/*.yml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Caixa-branca: nginx do container local (tráfego e saturação).
+  - job_name: nginx
+    static_configs:
+      - targets: ["nginx-exporter:9113"]
+        labels:
+          ambiente: local
+
+  # Caixa-preta: sondas HTTP. Os alvos ficam em arquivos (file_sd) para trocar
+  # a URL do Azure sem reiniciar o Prometheus.
+  - job_name: blackbox-http
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    file_sd_configs:
+      - files: ["/etc/prometheus/alvos/*.yml"]
+        refresh_interval: 1m
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  - job_name: blackbox
+    static_configs:
+      - targets: ["blackbox:9115"]
