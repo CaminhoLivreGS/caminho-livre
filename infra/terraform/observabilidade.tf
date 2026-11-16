@@ -21,10 +21,12 @@ resource "azurerm_monitor_action_group" "email" {
   location            = "global"
   tags                = local.tags
 
+  # O nome do destinatário usa só o índice: um nome derivado do e-mail
+  # escaparia da máscara de secrets do GitHub e apareceria no log público.
   dynamic "email_receiver" {
-    for_each = toset(var.emails_alerta)
+    for_each = { for i, email in var.emails_alerta : tostring(i) => email }
     content {
-      name                    = "email-${replace(email_receiver.value, "/[^a-zA-Z0-9]/", "-")}"
+      name                    = "email-${email_receiver.key}"
       email_address           = email_receiver.value
       use_common_alert_schema = true
     }

@@ -1,53 +1,35 @@
 # =============================================================================
-# Identidade do pipeline (GitHub Actions -> Azure) via OIDC, sem segredo.
+# Permissões das identidades do GitHub Actions nos recursos do projeto.
 #
-# Identidade gerenciada user-assigned com credencial federada: o Azure só
-# aceita tokens do GitHub emitidos para ESTE repositório, no environment
-# "production" (que, por regra do GitHub, só a branch main protegida usa).
-# Não há senha/client secret para vazar ou rotacionar.
+# As 3 identidades (deploy, plan e apply) e suas credenciais federadas OIDC
+# ficam na fundação (infra/bootstrap/), que nunca é destruída: se ficassem
+# aqui, o terraform destroy apagaria a identidade que o CI usa para recriar
+# a infraestrutura. Este arquivo concede só o acesso com escopo de recurso.
+#
+#   deploy  environment "production": envia a imagem e atualiza o Web App
+#   plan    environment "infra-plan": leitura (Reader na assinatura, na fundação)
+#   apply   environment "infra", com aprovação manual (papéis na fundação)
 # =============================================================================
 
-resource "azurerm_user_assigned_identity" "github_deploy" {
-  name                = "id-${local.nome}-github-deploy"
-  location            = azurerm_resource_group.principal.location
-  resource_group_name = azurerm_resource_group.principal.name
-  tags                = local.tags
-}
-
-resource "azurerm_federated_identity_credential" "github_production" {
-  name                      = "github-${var.github_environment}"
-  user_assigned_identity_id = azurerm_user_assigned_identity.github_deploy.id
-  issuer                    = "https://token.actions.githubusercontent.com"
-  audience                  = ["api://AzureADTokenExchange"]
-  # Formato com IDs imutáveis (padrão em repositórios novos do GitHub):
-  #   repo:OWNER@OWNER_ID/REPO@REPO_ID:environment:ENV
-  # Um repositório apagado e recriado com o mesmo nome tem outro ID, então
-  # não herda a permissão de deploy (proteção contra "repo squatting").
-  subject = format("repo:%s@%d/%s@%d:environment:%s",
-    split("/", var.github_repository)[0], var.github_owner_id,
-    split("/", var.github_repository)[1], var.github_repository_id,
-  var.github_environment)
-}
-
-# Menor privilégio: o pipeline só envia imagens ao ACR e atualiza ESTE Web App.
+# Deploy: menor privilégio, só neste ACR e neste Web App.
 resource "azurerm_role_assignment" "github_acr_push" {
   scope                = azurerm_container_registry.principal.id
   role_definition_name = "AcrPush"
-  principal_id         = azurerm_user_assigned_identity.github_deploy.principal_id
+  principal_id         = var.github_deploy_principal_id
   principal_type       = "ServicePrincipal"
 }
 
-# Leitura do recurso ACR (az acr login / az acr show resolvem o login server).
+# Leitura do recurso ACR (az acr login / az acr list resolvem o login server).
 resource "azurerm_role_assignment" "github_acr_reader" {
   scope                = azurerm_container_registry.principal.id
   role_definition_name = "Reader"
-  principal_id         = azurerm_user_assigned_identity.github_deploy.principal_id
+  principal_id         = var.github_deploy_principal_id
   principal_type       = "ServicePrincipal"
 }
 
 resource "azurerm_role_assignment" "github_webapp_contributor" {
   scope                = azurerm_linux_web_app.principal.id
   role_definition_name = "Website Contributor"
-  principal_id         = azurerm_user_assigned_identity.github_deploy.principal_id
+  principal_id         = var.github_deploy_principal_id
   principal_type       = "ServicePrincipal"
 }

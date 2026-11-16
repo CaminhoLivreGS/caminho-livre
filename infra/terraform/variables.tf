@@ -42,22 +42,40 @@ variable "github_repository" {
   }
 }
 
-variable "github_owner_id" {
-  description = "ID numérico (imutável) do dono do repositório: gh api repos/OWNER/REPO --jq .owner.id"
-  type        = number
-  default     = 355958631
-}
-
-variable "github_repository_id" {
-  description = "ID numérico (imutável) do repositório: gh api repos/OWNER/REPO --jq .id"
-  type        = number
-  default     = 1456200921
-}
-
-variable "github_environment" {
-  description = "Environment do GitHub cujo token OIDC é aceito (só a main pode usá-lo)."
+variable "github_deploy_principal_id" {
+  description = "Object ID da identidade de deploy do GitHub (criada pelo bootstrap): vars.AZURE_DEPLOY_PRINCIPAL_ID"
   type        = string
-  default     = "production"
+
+  validation {
+    condition     = can(regex("^[0-9a-fA-F-]{36}$", var.github_deploy_principal_id))
+    error_message = "github_deploy_principal_id deve ser um GUID."
+  }
+}
+
+variable "github_plan_principal_id" {
+  description = "Object ID da identidade de plan do GitHub (criada pelo bootstrap): vars.AZURE_PLAN_PRINCIPAL_ID"
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9a-fA-F-]{36}$", var.github_plan_principal_id))
+    error_message = "github_plan_principal_id deve ser um GUID."
+  }
+}
+
+variable "github_apply_principal_id" {
+  description = "Object ID da identidade de apply do GitHub (criada pelo bootstrap): vars.AZURE_APPLY_PRINCIPAL_ID"
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9a-fA-F-]{36}$", var.github_apply_principal_id))
+    error_message = "github_apply_principal_id deve ser um GUID."
+  }
+}
+
+variable "segredos_expiram_em" {
+  description = "Validade dos segredos no Key Vault (RFC 3339). Renove antes da data."
+  type        = string
+  default     = "2027-12-31T23:59:59Z"
 }
 
 variable "app_service_sku" {
