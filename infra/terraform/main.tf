@@ -131,6 +131,9 @@ resource "azurerm_linux_web_app" "principal" {
   app_settings = {
     WEBSITES_PORT                       = "8080"
     WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
+    # Key Vault Reference: o App Service resolve o valor com a identidade
+    # gerenciada do Web App; a app setting guarda só o endereço do segredo.
+    APPLICATIONINSIGHTS_CONNECTION_STRING = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.appinsights_connection_string.versionless_id})"
   }
 
   logs {

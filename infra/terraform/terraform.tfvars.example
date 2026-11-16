@@ -15,3 +15,10 @@ emails_alerta  = ["seu-email@exemplo.com"]
 # Descubra com: curl -s https://api.ipify.org
 # NUNCA use 0.0.0.0/0 (a validação rejeita).
 admin_cidrs = []
+
+# Identidades do GitHub criadas por infra/bootstrap/fundacao.sh
+# (no CI vêm de vars.AZURE_*_PRINCIPAL_ID). Para aplicar localmente, use o seu
+# object ID em github_apply_principal_id: az ad signed-in-user show --query id -o tsv
+github_deploy_principal_id = "00000000-0000-0000-0000-000000000000"
+github_plan_principal_id   = "00000000-0000-0000-0000-000000000000"
+github_apply_principal_id  = "00000000-0000-0000-0000-000000000000"

@@ -11,3 +11,20 @@ AZU-0003
 # Aceito: mTLS é para comunicação máquina-a-máquina; cidadãos acessam por
 # navegador comum, sem certificado de cliente.
 AZU-0001
+
+# AZU-0013 - Key Vault aceita conexões da rede pública (firewall em Allow).
+# Aceito no MVP: o Web App só alcança um cofre com firewall por VNet
+# Integration, indisponível no plano F1; e os runners do GitHub (plan/apply
+# do Terraform) não têm IP fixo. Private Endpoint exigiria VNet e plano pago.
+# Controles compensatórios: autorização só por RBAC (sem access policies nem
+# chaves), papéis com escopo no cofre (Secrets User para leitura, Secrets
+# Officer só para quem aplica o Terraform), segredo write-only fora do tfstate,
+# TLS obrigatório e logs de acesso disponíveis no Azure Monitor.
+# Revisar ao migrar para um plano com VNet (B1 ou superior).
+AZU-0013
+
+# AZU-0016 - Key Vault sem proteção contra purge.
+# Aceito: a infra é destruída e recriada entre avaliações para poupar
+# créditos; com a proteção ligada, o nome do cofre ficaria bloqueado por até
+# 90 dias. O soft delete (7 dias) continua ativo. Em produção, ligar.
+AZU-0016

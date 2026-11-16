@@ -18,9 +18,24 @@ Trabalho da disciplina **Secure DevOps Tools & Cloud Computing**, FIAP.
 | **Arquitetura** | SPA (Vite + JavaScript) com OpenCV.js em Web Worker, servida por nginx non-root em container. Azure App Service (Web App for Containers) + Azure Container Registry, provisionados por Terraform, com pipeline DevSecOps no GitHub Actions e observabilidade no Azure Monitor e em Prometheus/Grafana. Ver [Arquitetura](#arquitetura). |
 | **Fontes de dados** | Fotos enviadas pelo cidadão (processadas só no aparelho). Calibração e testes com 101 fotos de licença livre do [Wikimedia Commons](dataset/CREDITOS.md), sem pessoas identificáveis. Estrutura pronta para um dataset brasileiro de treino/teste (`dataset/brasil/`). |
 | **Modelos de IA** | Visão computacional clássica: Canny, morfologia, limiarização HSV, componentes conexos, Hough e hash perceptual (dHash). Única IA treinada: **Haar Cascades** do OpenCV 4.9.0 (rosto frontal, perfil e placa), usada só para anonimização. Placas brasileiras detectadas por agrupamento de caracteres. Detalhes em [`docs/visao-computacional.md`](docs/visao-computacional.md). |
-| **URL** | https://app-caminholivre-prod-00e44e.azurewebsites.net. Para poupar créditos, a infraestrutura fica no ar só nas janelas de avaliação e é recriada por `terraform apply` + pipeline em cerca de 15 minutos. |
+| **URL** | https://app-caminholivre-prod-00e44e.azurewebsites.net. Disponível durante o período de avaliação; ver [Status do ambiente](#status-do-ambiente). |
 | **Indicadores de impacto** | **Medidos hoje:** acurácia de 65,7% (Acessibilidade), 89,7% (Obstáculo) e 87,0% (Alagamento); 17 de 21 placas brasileiras borradas; 0 fotos reais rejeitadas indevidamente. **Metas para o piloto:** número de denúncias validadas por mês; % confirmadas automaticamente (sem moderação); tempo médio até o encaminhamento à prefeitura; 100% das fotos enviadas anonimizadas; disponibilidade ≥ 99% e latência p95 < 2 s. |
 | **ODS** | **ODS 10, Redução das desigualdades** (meta 10.2: inclusão de pessoas com deficiência). **ODS 11, Cidades e comunidades sustentáveis** (meta 11.2: transporte e mobilidade acessíveis; meta 11.7: espaços públicos seguros, inclusivos e acessíveis). |
+
+## Status do ambiente
+
+| | |
+|---|---|
+| **URL** | https://app-caminholivre-prod-00e44e.azurewebsites.net |
+| **Situação** | 🟢 **No ar para a avaliação** desde 16/11/2026 |
+| **Plano** | App Service F1 (gratuito). A primeira visita após um período sem acesso pode levar até ~1 minuto, enquanto o container inicia (*cold start*); as seguintes são imediatas. |
+| **Custo enquanto no ar** | ≈ US$ 0,17/dia (só o Container Registry tem custo fixo) |
+
+Fora do período de avaliação, a infraestrutura é desligada para poupar créditos e a URL deixa de responder. Para religar ou desligar, sem acesso ao portal do Azure:
+
+1. GitHub → **Actions** → **Infra (Terraform)** → **Run workflow** (branch `main`).
+2. Escolha `acao = apply` (liga) ou `acao = destroy` (desliga).
+3. Um revisor aprova a execução no environment `infra`. O `apply` cria os recursos e dispara o deploy da aplicação, em cerca de 15 minutos.
 
 ## Arquitetura
 
@@ -36,6 +51,7 @@ flowchart LR
   subgraph GitHub["GitHub (CaminhoLivreGS/caminho-livre)"]
     GA["GitHub Actions<br/>testes, Terraform, Prometheus,<br/>Gitleaks, Semgrep, Trivy"]
     G{"Gate de segurança"}
+    TF["Infra (Terraform)<br/>plan automático,<br/>apply com aprovação"]
     GA --> G
   end
 
@@ -43,13 +59,18 @@ flowchart LR
     ACR["Azure Container Registry<br/>sem usuário admin"]
     APP["App Service Linux F1<br/>Web App for Containers<br/>nginx non-root :8080"]
     MON["Azure Monitor<br/>Log Analytics + App Insights<br/>Workbook + 4 alertas"]
-    ST[("Blob Storage<br/>tfstate remoto")]
+    KV["Key Vault (RBAC)<br/>connection string"]
     ACR -->|"pull (identidade gerenciada)"| APP
     APP -->|métricas e logs| MON
+    KV -->|"Key Vault Reference (identidade gerenciada)"| APP
+  end
+
+  subgraph Fundacao["Fundação Azure (nunca destruída)"]
+    ST[("Blob Storage<br/>tfstate remoto")]
+    ID["3 identidades OIDC<br/>deploy, plan, apply"]
   end
 
   subgraph Local["Máquina da equipe"]
-    TF["Terraform"]
     P["Prometheus + Blackbox"] --> GR["Grafana"]
   end
 
@@ -59,7 +80,8 @@ flowchart LR
   UI <-->|HTTPS| APP
   MON -->|e-mail| E["Equipe"]
   TF -->|estado| ST
-  TF -->|provisiona| ACR
+  TF -->|"provisiona (OIDC)"| ACR
+  ID -.->|identidades| GA
   P -->|sonda HTTPS| APP
 ```
 
@@ -90,28 +112,37 @@ flowchart LR
 | Azure Container Registry (Basic) | Sem usuário admin e sem pull anônimo; acesso só por RBAC |
 | App Service Plan Linux (F1) + Web App for Containers | HTTPS obrigatório, TLS 1.2+, FTP e WebDeploy com senha desligados, health check em `/healthz` |
 | Identidade gerenciada do Web App | Papel `AcrPull` no ACR (sem senha de registry) |
-| Identidade do pipeline | Credencial federada OIDC aceita só para `repo:CaminhoLivreGS@355958631/caminho-livre@1456200921:environment:production`. Os IDs imutáveis impedem que um repositório recriado com o mesmo nome herde o acesso. Papéis `AcrPush`, `Reader` (ACR) e `Website Contributor` (Web App) |
+| **Key Vault** (standard) | Autorização só por RBAC. Guarda a connection string do Application Insights, que o Web App lê por *Key Vault Reference* com a identidade gerenciada. O segredo é gravado como **write-only** (`value_wo`): o valor nunca entra no tfstate |
+| Papéis da identidade de deploy | `AcrPush` e `Reader` no ACR e `Website Contributor` no Web App |
 | Log Analytics + Application Insights | Retenção de 30 dias, teto de 0,1 GB/dia, IP mascarado |
 | Alertas e Workbook | Ver [Pilar 3](#pilar-3-observabilidade) |
 | Budget da assinatura | US$ 10/mês, alertas em 50%, 80% e 100% do gasto real e 100% do previsto |
 
 **Regras exigidas:**
-- **`tfstate` e `.tfvars` fora do repositório:** o estado fica num Azure Blob Storage criado por [`infra/bootstrap/criar-backend-tfstate.sh`](infra/bootstrap/criar-backend-tfstate.sh). Esse Storage tem autenticação só por Entra ID (chaves desligadas), versionamento e soft delete de 14 dias. `backend.hcl`, `terraform.tfvars` e `*.tfstate` estão no [`.gitignore`](.gitignore); o repositório só tem o modelo `terraform.tfvars.example`.
+- **`tfstate` e `.tfvars` fora do repositório:** o estado fica num Azure Blob Storage criado por [`infra/bootstrap/fundacao.sh`](infra/bootstrap/fundacao.sh). Esse Storage tem autenticação só por Entra ID (chaves desligadas), versionamento e soft delete de 14 dias. `backend.hcl`, `terraform.tfvars` e `*.tfstate` estão no [`.gitignore`](.gitignore); o repositório só tem o modelo `terraform.tfvars.example`.
 - **Portas de administração nunca abertas para `0.0.0.0/0`:** o App Service só expõe 80/443, e o HTTP é redirecionado para HTTPS. O site de administração (SCM/Kudu, por onde passa o SSH) é **negado para todos por padrão**. A variável `admin_cidrs` libera IPs específicos e sua validação **rejeita qualquer faixa maior que /16**, incluindo `0.0.0.0/0`.
 
+**Fundação** ([`infra/bootstrap/fundacao.sh`](infra/bootstrap/fundacao.sh), executada uma vez por um Owner): o tfstate e as 3 identidades do GitHub ficam num resource group que nunca é destruído. Se ficassem no Terraform principal, o `destroy` apagaria a identidade que o CI usa para recriar a infra.
+
+| Identidade | Environment do GitHub | Permissões |
+|---|---|---|
+| deploy | `production` (só a `main`) | `AcrPush`/`Reader` no ACR e `Website Contributor` no Web App (concedidas pelo Terraform) |
+| plan | `infra-plan` | `Reader` na assinatura, leitura do tfstate e `Key Vault Secrets User` (para o refresh) |
+| apply | `infra` (só a `main` + **aprovação de um revisor**) | `Contributor` + administração de RBAC **limitada por condição ABAC** aos 6 papéis que o Terraform atribui; não consegue conceder Owner nem Contributor |
+
+As credenciais federadas usam os IDs imutáveis do repositório (`repo:CaminhoLivreGS@355958631/caminho-livre@1456200921:environment:...`), então um repositório recriado com o mesmo nome não herda o acesso. Locks `CanNotDelete` (resource group) e `ReadOnly` (identidades) impedem que a identidade de apply apague o tfstate ou adicione credenciais federadas para outro repositório. Contributor não remove locks; o teste com Owner retornou `ScopeLocked`.
+
 ```sh
-az login
-sh infra/bootstrap/criar-backend-tfstate.sh          # uma vez: backend do tfstate
-cd infra/terraform
-cp terraform.tfvars.example terraform.tfvars         # preencha subscription_id e e-mail
-terraform init -backend-config=backend.hcl
-terraform plan -out=tfplan && terraform apply tfplan
-sh ../scripts/configurar-github.sh                   # cadastra secrets e variables no GitHub
+az login && sh infra/bootstrap/fundacao.sh                             # uma vez: fundação
+EMAIL_ALERTA=voce@exemplo.com sh infra/scripts/configurar-github.sh    # environments, secrets e variables
+# Depois: Actions > Infra (Terraform) > Run workflow > acao=apply
 ```
 
 ## Pilar 2: pipeline DevSecOps
 
-Workflow: [`.github/workflows/main.yml`](.github/workflows/main.yml). Roda em todo push (qualquer branch), em PR para a `main` e manualmente.
+Dois workflows:
+- [`main.yml`](.github/workflows/main.yml) (CI/CD DevSecOps): roda em todo push (qualquer branch), em PR para a `main` e manualmente.
+- [`infra.yml`](.github/workflows/infra.yml) (Infra Terraform): `terraform plan` automático em PRs e pushes que mexam em `infra/terraform/`; `apply` e `destroy` só por disparo manual na `main`, com aprovação.
 
 | Job | O que faz | Bloqueia quando |
 |---|---|---|
@@ -122,15 +153,17 @@ Workflow: [`.github/workflows/main.yml`](.github/workflows/main.yml). Roda em to
 | **Semgrep** | SAST com regras de JavaScript, React, segredos, Dockerfile, nginx e Terraform | Achado de risco **ALTO ou CRÍTICO** (matriz de risco OWASP: probabilidade × impacto, em [`.github/scripts/semgrep_gate.py`](.github/scripts/semgrep_gate.py)) |
 | **Trivy** | CVEs da imagem Docker, segredos na imagem, misconfigurações de Dockerfile e Terraform, usuário non-root | CVE **HIGH ou CRITICAL** com correção disponível, ou misconfiguração HIGH/CRITICAL |
 | Gate de segurança | Consolida os resultados acima | Qualquer job anterior falhou |
-| Deploy (Azure) | Push da imagem aprovada para o ACR e atualização do Web App, com smoke test em `/healthz` | Só roda em push na `main` com o gate aprovado |
+| Deploy (Azure) | Localiza o ACR e o Web App pela tag do projeto, envia a imagem aprovada e atualiza o Web App, com smoke test em `/healthz` | Só roda na `main` com o gate aprovado; com a infra desligada, registra e termina |
+| Terraform plan (`infra.yml`) | Plano com a identidade de leitura; o resumo mostra só os endereços dos recursos | Configuração inválida ou erro no plano |
+| Terraform apply/destroy (`infra.yml`) | Plano e aplicação com a identidade de apply; o `apply` dispara o deploy | Exige aprovação no environment `infra` |
 
 **Controles do pipeline:**
-- Credenciais no **GitHub Secrets** (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, no environment `production`). São só identificadores: o login usa OIDC, sem senha de longa duração para vazar.
+- Credenciais no **GitHub Secrets**: `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` e `ALERT_EMAIL` no repositório, e `AZURE_CLIENT_ID` em cada environment (uma identidade por função). São só identificadores: o login usa OIDC, sem senha de longa duração para vazar. Os valores são mascarados nos logs, e o arquivo de plan não é publicado como artefato.
 - Todas as Actions de terceiros fixadas por SHA de commit e `permissions` mínimas por job.
 - A branch `main` é protegida: exige PR e o check "Gate de segurança"; force push e exclusão bloqueados, valendo também para admins.
-- O environment `production` só aceita deploy de branches protegidas.
+- Os environments `production` e `infra` só aceitam a `main`, e `infra` exige aprovação de um revisor.
 - Relatórios SARIF publicados no GitHub Code Scanning (aba Security) e como artefatos por 30 dias.
-- Riscos aceitos documentados em [`.trivyignore`](.trivyignore), com justificativa: o app é público e não exige login nem certificado de cliente.
+- Riscos aceitos documentados em [`.trivyignore`](.trivyignore), com justificativa e controles compensatórios: o app é público (sem login nem certificado de cliente), e o firewall do Key Vault fica aberto porque o plano F1 não tem VNet e os runners do GitHub não têm IP fixo.
 
 ### Simulação de falha (evidência do bloqueio)
 
@@ -189,7 +222,8 @@ Preços de tabela em USD, região `eastus`, consultados em [prices.azure.com](ht
 | Alertas de métrica (4 regras) | | 10 primeiras grátis; depois US$ 0,10/mês | **US$ 0,00** |
 | Action group (e-mail) | | 1.000 e-mails/mês grátis | **US$ 0,00** |
 | Storage do tfstate | Standard LRS | Poucos KB | **< US$ 0,01** |
-| Identidades, RBAC, budget | | Sem custo | **US$ 0,00** |
+| Key Vault | Standard | Sem mensalidade; US$ 0,03 a cada 10 mil operações | **≈ US$ 0,00** |
+| Identidades, RBAC, locks, budget | | Sem custo | **US$ 0,00** |
 | **Total** | | | **≈ US$ 5,00/mês (≈ US$ 0,17/dia)** |
 
 **Cenário de produção (referência):** App Service B1 (US$ 0,017/h ≈ US$ 12,41/mês), que adiciona Always On, sem cold start e com SLA, totalizando **≈ US$ 17,40/mês**.
@@ -213,7 +247,7 @@ O Azure App Service é um serviço **PaaS**: a Microsoft opera a plataforma e a 
 | Certificado TLS do domínio `*.azurewebsites.net` | ✅ | | |
 | **Imagem do container** (SO base, pacotes, nginx) | | ✅ | Trivy bloqueia CVEs HIGH/CRITICAL; `apk upgrade` no build; base Alpine atualizada |
 | **Código da aplicação** | | ✅ | Semgrep (SAST), testes unitários, revisão por PR |
-| **Segredos e credenciais** | | ✅ | Gitleaks no histórico; OIDC sem senha; GitHub Secrets; ACR sem admin |
+| **Segredos e credenciais** | Fornece o Key Vault (armazenamento criptografado, disponibilidade, controle de acesso) | ✅ | Arquitetura sem segredos de longa duração (OIDC, identidade gerenciada, ACR sem admin); Key Vault por RBAC com segredo write-only; Gitleaks no histórico; GitHub Secrets |
 | **Identidade e acesso** (RBAC) | Fornece o Entra ID e o RBAC | ✅ Configura | Menor privilégio: `AcrPull`, `AcrPush`, `Website Contributor` restritos ao recurso |
 | **Configuração de rede e exposição** | Fornece os controles | ✅ Configura | HTTPS obrigatório, TLS 1.2, SCM/SSH negado por padrão, sem `0.0.0.0/0` |
 | **Dados e privacidade (LGPD)** | Protege a infraestrutura onde os dados ficam | ✅ | Anonimização no aparelho, IP mascarado no App Insights, retenção limitada |
@@ -250,7 +284,7 @@ Galeria completa, com a descrição de cada print: [`docs/evidencias/`](docs/evi
 | SSH/administração fechada | Verificado com a infra no ar: o SCM/Kudu respondeu **HTTP 403** a acessos pela internet (`scm_ip_restriction_default_action = "Deny"`; `admin_cidrs` rejeita `0.0.0.0/0`) |
 | Métricas de Ouro e alerta disparado | Azure Monitor: o alerta `disponibilidade` (Sev1) disparou enquanto o app respondia 503 e se resolveu sozinho após o deploy ([lista](docs/evidencias/08-azure-monitor-alertas.png), [detalhe](docs/evidencias/09-azure-alerta-disponibilidade.png)). Prometheus local: queda simulada com alerta em 2 minutos ([print](docs/evidencias/grafana-metricas-de-ouro-queda-simulada.png)) |
 
-**Desligar a infraestrutura** (zera o gasto e mantém só o tfstate): `sh infra/scripts/destruir.sh`. **Religar:** `terraform apply` + `sh infra/scripts/configurar-github.sh` + qualquer push na `main`.
+**Ligar ou desligar a infraestrutura:** ver [Status do ambiente](#status-do-ambiente). Alternativa local de emergência para desligar: `sh infra/scripts/destruir.sh`.
 
 ## Estrutura do repositório
 

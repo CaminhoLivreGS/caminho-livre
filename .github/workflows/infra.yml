@@ -1,0 +1,227 @@
+# =============================================================================
+# Infra (Terraform): plan automático, apply/destroy manual com aprovação.
+#
+#   PR ou push na main que mexa em infra/terraform  ->  plan  (identidade de
+#                                                       leitura, sem lock)
+#   Run workflow, acao=plan                         ->  plan
+#   Run workflow, acao=apply|destroy (só na main)   ->  aprovação de um revisor
+#                                                       no environment "infra"
+#                                                       -> plan + apply
+#
+# Autenticação: OIDC (sem senha). Cada job usa uma identidade diferente:
+#   plan   environment infra-plan   Reader + leitura do tfstate
+#   apply  environment infra        Contributor + RBAC limitado por ABAC
+# O arquivo de plan NÃO é publicado como artefato (contém valores em texto puro
+# e o repositório é público). Os valores dos secrets são mascarados nos logs.
+# =============================================================================
+name: Infra (Terraform)
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ["infra/terraform/**", ".github/workflows/infra.yml"]
+  push:
+    branches: [main]
+    paths: ["infra/terraform/**", ".github/workflows/infra.yml"]
+  workflow_dispatch:
+    inputs:
+      acao:
+        description: "plan: só mostra o plano | apply: liga/atualiza a infra | destroy: desliga a infra (zera o gasto)"
+        type: choice
+        options: [plan, apply, destroy]
+        default: plan
+
+permissions:
+  contents: read
+
+env:
+  TF_VERSION: "1.17.2"
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  # Provider e backend azurerm autenticam por OIDC com o token do GitHub.
+  ARM_USE_OIDC: "true"
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  # Variáveis do Terraform (substituem o terraform.tfvars local).
+  TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  TF_VAR_emails_alerta: '["${{ secrets.ALERT_EMAIL }}"]'
+  TF_VAR_github_deploy_principal_id: ${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}
+  TF_VAR_github_plan_principal_id: ${{ vars.AZURE_PLAN_PRINCIPAL_ID }}
+  TF_VAR_github_apply_principal_id: ${{ vars.AZURE_APPLY_PRINCIPAL_ID }}
+  TFSTATE_RG: ${{ vars.TFSTATE_RESOURCE_GROUP }}
+  TFSTATE_CONTA: ${{ vars.TFSTATE_STORAGE_ACCOUNT }}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Plan: somente leitura. -lock=false porque obter o lock exige escrita no
+  # tfstate; o plan não altera nada.
+  # ---------------------------------------------------------------------------
+  plan:
+    name: "Terraform plan"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # PRs de forks não recebem token OIDC nem secrets.
+    if: >-
+      (github.event_name != 'workflow_dispatch' || inputs.acao == 'plan') &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    environment: infra-plan
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Init (backend remoto, leitura)
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        run: |
+          terraform init -lockfile=readonly \
+            -backend-config="resource_group_name=${TFSTATE_RG}" \
+            -backend-config="storage_account_name=${TFSTATE_CONTA}" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=caminho-livre.tfstate" \
+            -backend-config="use_azuread_auth=true"
+
+      - name: Plan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        run: |
+          set +e
+          terraform plan -lock=false -no-color -detailed-exitcode -out=tfplan
+          codigo=$?
+          set -e
+          [ "$codigo" -eq 1 ] && exit 1
+          {
+            echo "## Terraform plan"
+            echo ""
+            if [ "$codigo" -eq 0 ]; then
+              echo "✅ Sem mudanças: a infraestrutura bate com o código."
+            else
+              terraform show -no-color tfplan | grep -E '^Plan:|^Changes to Outputs' || true
+              echo ""
+              echo '```'
+              # Só os endereços dos recursos (sem valores).
+              terraform show -no-color tfplan | grep -E '^  # ' | sed 's/^  # //' || true
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm -f tfplan
+
+  # ---------------------------------------------------------------------------
+  # Apply/destroy: manual, só na main, com aprovação no environment "infra".
+  # ---------------------------------------------------------------------------
+  aplicar:
+    name: "Terraform ${{ inputs.acao }}"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (inputs.acao == 'apply' || inputs.acao == 'destroy')
+    environment: infra
+    concurrency:
+      group: terraform-tfstate        # um apply por vez no mesmo estado
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+      actions: write                  # dispara o deploy depois do apply
+    defaults:
+      run:
+        working-directory: infra/terraform
+    env:
+      ACAO: ${{ inputs.acao }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Login no Azure (OIDC, para a limpeza do destroy)
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Init (backend remoto, com lock)
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        run: |
+          terraform init -lockfile=readonly \
+            -backend-config="resource_group_name=${TFSTATE_RG}" \
+            -backend-config="storage_account_name=${TFSTATE_CONTA}" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=caminho-livre.tfstate" \
+            -backend-config="use_azuread_auth=true"
+
+      # O Application Insights cria sozinho recursos de detecção inteligente,
+      # fora do Terraform, que impedem a exclusão do resource group.
+      - name: Limpar recursos automáticos do Application Insights
+        if: inputs.acao == 'destroy'
+        run: |
+          rg="$(terraform output -raw resource_group 2>/dev/null || true)"
+          [ -n "$rg" ] && [ "$(az group exists -n "$rg")" = "true" ] || { echo "Nada a limpar."; exit 0; }
+          az resource list -g "$rg" \
+            --query "[?type=='microsoft.alertsmanagement/smartDetectorAlertRules' || (type=='microsoft.insights/actiongroups' && name=='Application Insights Smart Detection')].id" \
+            -o tsv | while IFS= read -r id; do
+              [ -n "$id" ] || continue
+              echo "apagando ${id##*/}"
+              az resource delete --ids "$id" --output none
+            done
+
+      - name: Plan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        run: |
+          if [ "$ACAO" = "destroy" ]; then
+            terraform plan -destroy -no-color -out=tfplan
+          else
+            terraform plan -no-color -out=tfplan
+          fi
+
+      - name: Apply
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        run: |
+          terraform apply -no-color tfplan
+          rm -f tfplan
+
+      - name: Disparar o deploy da aplicação
+        if: inputs.acao == 'apply'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run main.yml --repo "$GITHUB_REPOSITORY" --ref main
+          url="$(terraform output -raw app_url)"
+          {
+            echo "## ✅ Infraestrutura no ar"
+            echo ""
+            echo "Deploy disparado no workflow *CI/CD DevSecOps*. URL: ${url}"
+            echo ""
+            echo "💰 Custo: ≈ US\$ 0,17/dia enquanto estiver no ar. Desligue com acao=destroy."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resumo do destroy
+        if: inputs.acao == 'destroy'
+        run: |
+          {
+            echo "## ⏸️ Infraestrutura desligada"
+            echo ""
+            echo "Recursos do projeto removidos; só a fundação (tfstate e identidades) permanece, a < US\$ 0,01/mês."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Logout do Azure
+        if: always()
+        run: az logout || true
