@@ -36,7 +36,7 @@ RUN npm run deps && npm run build && rm -rf dist/opencv
 
 # ---------- Estágio 2: runtime ----------
 # Linha "stable" do nginx (1.30) sobre Alpine 3.24.
-FROM nginxinc/nginx-unprivileged:1.30-alpine3.24 AS runtime
+FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime   # SIMULAÇÃO: base antiga
 
 LABEL org.opencontainers.image.title="caminho-livre" \
       org.opencontainers.image.description="Caminho Livre - denúncias de acessibilidade urbana com visão computacional (OpenCV.js) e anonimização LGPD no navegador" \
@@ -45,7 +45,7 @@ LABEL org.opencontainers.image.title="caminho-livre" \
 # Atualiza pacotes do SO (reduz CVEs apontadas pelo Trivy) e volta para o
 # usuário sem privilégios logo em seguida.
 USER root
-RUN apk upgrade --no-cache && rm -rf /var/cache/apk/*
+# SIMULAÇÃO: apk upgrade removido
 
 # Configuração do servidor (headers de segurança, /healthz, métricas internas).
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
