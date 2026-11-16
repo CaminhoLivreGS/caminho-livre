@@ -19,7 +19,14 @@ resource "azurerm_federated_identity_credential" "github_production" {
   user_assigned_identity_id = azurerm_user_assigned_identity.github_deploy.id
   issuer                    = "https://token.actions.githubusercontent.com"
   audience                  = ["api://AzureADTokenExchange"]
-  subject                   = "repo:${var.github_repository}:environment:${var.github_environment}"
+  # Formato com IDs imutáveis (padrão em repositórios novos do GitHub):
+  #   repo:OWNER@OWNER_ID/REPO@REPO_ID:environment:ENV
+  # Um repositório apagado e recriado com o mesmo nome tem outro ID, então
+  # não herda a permissão de deploy (proteção contra "repo squatting").
+  subject = format("repo:%s@%d/%s@%d:environment:%s",
+    split("/", var.github_repository)[0], var.github_owner_id,
+    split("/", var.github_repository)[1], var.github_repository_id,
+  var.github_environment)
 }
 
 # Menor privilégio: o pipeline só envia imagens ao ACR e atualiza ESTE Web App.

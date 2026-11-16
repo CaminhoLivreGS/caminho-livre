@@ -42,6 +42,18 @@ variable "github_repository" {
   }
 }
 
+variable "github_owner_id" {
+  description = "ID numérico (imutável) do dono do repositório: gh api repos/OWNER/REPO --jq .owner.id"
+  type        = number
+  default     = 355958631
+}
+
+variable "github_repository_id" {
+  description = "ID numérico (imutável) do repositório: gh api repos/OWNER/REPO --jq .id"
+  type        = number
+  default     = 1456200921
+}
+
 variable "github_environment" {
   description = "Environment do GitHub cujo token OIDC é aceito (só a main pode usá-lo)."
   type        = string
