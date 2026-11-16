@@ -36,7 +36,8 @@ RUN npm run deps && npm run build && rm -rf dist/opencv
 
 # ---------- Estágio 2: runtime ----------
 # Linha "stable" do nginx (1.30) sobre Alpine 3.24.
-FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime   # SIMULAÇÃO: base antiga
+# SIMULAÇÃO: base antiga (nginx 1.27 / Alpine 3.21), com CVEs HIGH/CRITICAL
+FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
 
 LABEL org.opencontainers.image.title="caminho-livre" \
       org.opencontainers.image.description="Caminho Livre - denúncias de acessibilidade urbana com visão computacional (OpenCV.js) e anonimização LGPD no navegador" \
