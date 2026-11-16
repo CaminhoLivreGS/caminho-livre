@@ -238,17 +238,17 @@ Se o produto migrasse para IaaS (máquinas virtuais), o patch do sistema operaci
 
 ## Evidências para a avaliação
 
+Galeria completa, com a descrição de cada print: [`docs/evidencias/`](docs/evidencias/README.md).
+
 | Requisito | Evidência |
 |---|---|
-| Pipeline aprovado, com os 3 scanners em paralelo e **deploy automático no Azure** | [Run com deploy](https://github.com/CaminhoLivreGS/caminho-livre/actions/runs/43898004965): 8 jobs verdes, login OIDC, push no ACR, deploy no Web App e smoke test em `/healthz` |
-| **Bloqueio automático** por vulnerabilidade | [PR #3, simulação de falha](https://github.com/CaminhoLivreGS/caminho-livre/pull/3), fechado sem merge. No [run reprovado](https://github.com/CaminhoLivreGS/caminho-livre/actions/runs/43903627055): Gitleaks (segredo falso), Semgrep (2 achados ALTO: XSS e JWT fixo) e Trivy (**68 CVEs: 65 HIGH, 3 CRITICAL**) reprovam, o gate mostra "DEPLOY BLOQUEADO", o deploy não roda e a proteção da `main` impede o merge |
+| Pipeline aprovado, com os 3 scanners em paralelo e **deploy automático no Azure** | [Run com deploy](https://github.com/CaminhoLivreGS/caminho-livre/actions/runs/43898004965) ([print](docs/evidencias/06-run-verde-com-deploy.png)): 8 jobs verdes, login OIDC, push no ACR, deploy no Web App e smoke test em `/healthz`. [App no ar](docs/evidencias/07-app-no-ar-azure.png) |
+| **Bloqueio automático** por vulnerabilidade | [PR #3, simulação de falha](https://github.com/CaminhoLivreGS/caminho-livre/pull/3), fechado sem merge. Gitleaks detecta o segredo falso ([print](docs/evidencias/01-pr3-gitleaks-segredo.png)); Semgrep aponta 2 achados ALTO, XSS e JWT fixo ([print](docs/evidencias/02-pr3-semgrep-xss.png), [print](docs/evidencias/03-pr3-semgrep-jwt-sem-deploy.png)); Trivy encontra **68 CVEs, 65 HIGH e 3 CRITICAL** ([print](docs/evidencias/05-trivy-68-cves.png)); o gate mostra "DEPLOY BLOQUEADO" ([print](docs/evidencias/04-gate-deploy-bloqueado.png)) e a proteção da `main` impede o merge. [Logs completos](docs/evidencias/logs-run-simulacao-43903627055.zip) |
 | Relatórios dos scanners | Aba Security → Code scanning e artefatos de cada execução |
 | Container non-root | Passo "Verificar usuário non-root" no job do Trivy (UID 101) |
 | tfstate remoto e `.tfvars` fora do git | Backend `azurerm` em [`infra/terraform/versions.tf`](infra/terraform/versions.tf); `*.tfstate`, `*.tfvars` e `backend.hcl` no [`.gitignore`](.gitignore) |
 | SSH/administração fechada | Verificado com a infra no ar: o SCM/Kudu respondeu **HTTP 403** a acessos pela internet (`scm_ip_restriction_default_action = "Deny"`; `admin_cidrs` rejeita `0.0.0.0/0`) |
-| Métricas de Ouro e alerta disparado | No Azure, o alerta `disponibilidade` (Sev1) disparou e enviou e-mail enquanto o app respondia 503, antes do primeiro deploy. No Prometheus local, a queda simulada aparece em [`docs/evidencias/`](docs/evidencias/) |
-
-Os prints do portal do Azure (Workbook e alertas), do e-mail de alerta e do app no ar ficam em [`docs/evidencias/`](docs/evidencias/).
+| Métricas de Ouro e alerta disparado | Azure Monitor: o alerta `disponibilidade` (Sev1) disparou enquanto o app respondia 503 e se resolveu sozinho após o deploy ([lista](docs/evidencias/08-azure-monitor-alertas.png), [detalhe](docs/evidencias/09-azure-alerta-disponibilidade.png)). Prometheus local: queda simulada com alerta em 2 minutos ([print](docs/evidencias/grafana-metricas-de-ouro-queda-simulada.png)) |
 
 **Desligar a infraestrutura** (zera o gasto e mantém só o tfstate): `sh infra/scripts/destruir.sh`. **Religar:** `terraform apply` + `sh infra/scripts/configurar-github.sh` + qualquer push na `main`.
 
