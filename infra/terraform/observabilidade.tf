@@ -9,8 +9,8 @@
 #   Saturação   CpuTime (s de CPU; métrica indicada para planos F1/Free),
 #               MemoryWorkingSet
 #
-# Custo: regras de alerta de métrica ~US$ 0,10/mês cada (4 regras ~US$ 0,40/mês,
-# cobrado proporcional ao tempo). E-mails do action group: 1.000/mês grátis.
+# Custo: as 10 primeiras séries monitoradas por alertas de métrica são gratuitas
+# (depois, US$ 0,10/mês cada; prices.azure.com). E-mails: 1.000/mês grátis.
 # Workbooks não têm custo; consultam o Log Analytics (dentro da cota gratuita).
 # =============================================================================
 

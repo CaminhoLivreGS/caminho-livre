@@ -9,9 +9,9 @@ variable "subscription_id" {
 }
 
 variable "location" {
-  description = "Região Azure. brazilsouth mantém os dados no Brasil (alinhado à LGPD)."
+  description = "Região Azure. A política do Azure for Students só permite eastus, southcentralus, canadacentral, mexicocentral e southafricanorth; eastus tem todos os serviços e o menor preço do B1."
   type        = string
-  default     = "brazilsouth"
+  default     = "eastus"
 }
 
 variable "projeto" {
@@ -52,7 +52,7 @@ variable "app_service_sku" {
   description = <<-EOT
     SKU do App Service Plan Linux.
     F1 (padrão): gratuito; 60 min de CPU/dia, sem Always On (cold start) e sem SLA.
-    B1: ~US$ 0,02/h em brazilsouth (~US$ 14,60/mês); use só se o F1 não atender.
+    B1: ~US$ 0,017/h em eastus (~US$ 12,40/mês); use só se o F1 não atender.
   EOT
   type        = string
   default     = "F1"

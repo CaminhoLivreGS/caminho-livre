@@ -1,101 +1,269 @@
 # Caminho Livre
 
-Aplicação CitizenTech de acessibilidade urbana: o cidadão fotografa um problema na calçada, informa o tipo, e um módulo de **visão computacional clássica (OpenCV.js)** confirma a evidência e **anonimiza rostos e placas (LGPD)** antes de qualquer envio. Tudo roda no navegador; nenhuma foto sai do aparelho sem anonimização.
+[![CI/CD DevSecOps](https://github.com/CaminhoLivreGS/caminho-livre/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/CaminhoLivreGS/caminho-livre/actions/workflows/main.yml)
 
-## Como rodar
+App colaborativo de acessibilidade urbana para pedestres com deficiência e mobilidade reduzida. O cidadão fotografa um problema na calçada, e um módulo de visão computacional no próprio celular confirma a evidência e borra rostos e placas antes de qualquer envio.
 
-Requisitos: Node 18+, Python 3 e Google Chrome (só para o teste de precisão).
+Trabalho da disciplina **Secure DevOps Tools & Cloud Computing**, FIAP.
+**Integrantes:** Gilson Dias, Gabriel de Mendonça e Isabelle Toricelli.
+
+## Ficha técnica do MVP
+
+| Item | Descrição |
+|---|---|
+| **Nome do produto** | Caminho Livre |
+| **Cidadão** | Pedestres com deficiência (visual, física, cadeirantes) e com mobilidade reduzida (idosos, gestantes, pessoas com carrinho de bebê), que dependem de calçadas transitáveis. |
+| **Problema** | Buracos, calçadas quebradas, degraus, piso tátil interrompido, obstáculos e alagamentos impedem a circulação. As denúncias chegam ao poder público sem evidência confiável, duplicadas ou com fotos que expõem pessoas e placas de veículos. |
+| **Proposta de valor** | Denunciar um problema em 4 passos (Foto, Tipo, Resultado, Enviado), com interface acessível (WCAG 2.1, teclado e leitor de tela). A visão computacional confirma a evidência e anonimiza a foto no próprio aparelho, gerando denúncias verificadas e em conformidade com a LGPD. |
+| **Arquitetura** | SPA (Vite + JavaScript) com OpenCV.js em Web Worker, servida por nginx non-root em container. Azure App Service (Web App for Containers) + Azure Container Registry, provisionados por Terraform, com pipeline DevSecOps no GitHub Actions e observabilidade no Azure Monitor e em Prometheus/Grafana. Ver [Arquitetura](#arquitetura). |
+| **Fontes de dados** | Fotos enviadas pelo cidadão (processadas só no aparelho). Calibração e testes com 101 fotos de licença livre do [Wikimedia Commons](dataset/CREDITOS.md), sem pessoas identificáveis. Estrutura pronta para um dataset brasileiro de treino/teste (`dataset/brasil/`). |
+| **Modelos de IA** | Visão computacional clássica: Canny, morfologia, limiarização HSV, componentes conexos, Hough e hash perceptual (dHash). Única IA treinada: **Haar Cascades** do OpenCV 4.9.0 (rosto frontal, perfil e placa), usada só para anonimização. Placas brasileiras detectadas por agrupamento de caracteres. Detalhes em [`docs/visao-computacional.md`](docs/visao-computacional.md). |
+| **URL** | https://app-caminholivre-prod-00e44e.azurewebsites.net. Para poupar créditos, a infraestrutura fica no ar só nas janelas de avaliação e é recriada por `terraform apply` + pipeline em cerca de 15 minutos. |
+| **Indicadores de impacto** | **Medidos hoje:** acurácia de 65,7% (Acessibilidade), 89,7% (Obstáculo) e 87,0% (Alagamento); 17 de 21 placas brasileiras borradas; 0 fotos reais rejeitadas indevidamente. **Metas para o piloto:** número de denúncias validadas por mês; % confirmadas automaticamente (sem moderação); tempo médio até o encaminhamento à prefeitura; 100% das fotos enviadas anonimizadas; disponibilidade ≥ 99% e latência p95 < 2 s. |
+| **ODS** | **ODS 10, Redução das desigualdades** (meta 10.2: inclusão de pessoas com deficiência). **ODS 11, Cidades e comunidades sustentáveis** (meta 11.2: transporte e mobilidade acessíveis; meta 11.7: espaços públicos seguros, inclusivos e acessíveis). |
+
+## Arquitetura
+
+```mermaid
+flowchart LR
+  subgraph Celular["Celular do cidadão (navegador)"]
+    UI["Interface acessível<br/>index.html + app.js"]
+    W["Web Worker<br/>OpenCV.js (WebAssembly)"]
+    L["LGPD: borra rostos e placas<br/>e remove metadados EXIF"]
+    UI -->|foto| W --> L -->|imagem anonimizada| UI
+  end
+
+  subgraph GitHub["GitHub (CaminhoLivreGS/caminho-livre)"]
+    GA["GitHub Actions<br/>testes, Terraform, Prometheus,<br/>Gitleaks, Semgrep, Trivy"]
+    G{"Gate de segurança"}
+    GA --> G
+  end
+
+  subgraph Azure["Microsoft Azure (eastus)"]
+    ACR["Azure Container Registry<br/>sem usuário admin"]
+    APP["App Service Linux F1<br/>Web App for Containers<br/>nginx non-root :8080"]
+    MON["Azure Monitor<br/>Log Analytics + App Insights<br/>Workbook + 4 alertas"]
+    ST[("Blob Storage<br/>tfstate remoto")]
+    ACR -->|"pull (identidade gerenciada)"| APP
+    APP -->|métricas e logs| MON
+  end
+
+  subgraph Local["Máquina da equipe"]
+    TF["Terraform"]
+    P["Prometheus + Blackbox"] --> GR["Grafana"]
+  end
+
+  G -->|"aprovado: push da imagem (OIDC)"| ACR
+  G -->|"aprovado: deploy (OIDC)"| APP
+  G -.->|reprovado| X["Deploy bloqueado"]
+  UI <-->|HTTPS| APP
+  MON -->|e-mail| E["Equipe"]
+  TF -->|estado| ST
+  TF -->|provisiona| ACR
+  P -->|sonda HTTPS| APP
+```
+
+**Fluxo:**
+1. Todo push dispara o pipeline. Os testes e os scanners de segurança rodam em paralelo.
+2. Se qualquer verificação falhar, o gate reprova e o deploy não acontece.
+3. Na `main`, a imagem aprovada (a mesma que o Trivy analisou) vai para o ACR com a tag do commit, e o Web App é atualizado. O login no Azure é feito por OIDC, sem senha guardada.
+4. A foto do cidadão é analisada e anonimizada no navegador. O servidor só entrega arquivos estáticos.
+
+## Pilar 1: container e infraestrutura como código
+
+**Container** ([`Dockerfile`](Dockerfile)):
+- Build multi-stage: Node só para compilar; o runtime é `nginx-unprivileged` com o bundle estático.
+- **Usuário non-root** (UID 101), porta 8080. O pipeline falha se a imagem rodar como root.
+- Sem segredos na imagem: não há credenciais em `ARG`/`ENV`, e o [`.dockerignore`](.dockerignore) exclui `.env`, `*.tfvars` e `*.tfstate`.
+- Dependências binárias (Haar Cascades) baixadas com verificação de SHA-256.
+- Headers de segurança no nginx: CSP sem `unsafe-inline`, HSTS, `X-Frame-Options`, `Permissions-Policy` limitando a câmera à própria origem.
+
+**Docker Compose** ([`docker-compose.yml`](docker-compose.yml)):
+- `docker compose up --build -d` sobe o app. Com `--profile observability`, sobe também Prometheus, Blackbox, nginx-exporter e Grafana.
+- Portas publicadas só em `127.0.0.1`, sistema de arquivos read-only, `cap_drop: ALL`, `no-new-privileges` e limites de CPU e memória.
+- A senha do Grafana é um Docker secret, num arquivo fora do git.
+
+**Terraform** ([`infra/terraform/`](infra/terraform/)):
+
+| Recurso | Configuração de segurança |
+|---|---|
+| Azure Container Registry (Basic) | Sem usuário admin e sem pull anônimo; acesso só por RBAC |
+| App Service Plan Linux (F1) + Web App for Containers | HTTPS obrigatório, TLS 1.2+, FTP e WebDeploy com senha desligados, health check em `/healthz` |
+| Identidade gerenciada do Web App | Papel `AcrPull` no ACR (sem senha de registry) |
+| Identidade do pipeline | Credencial federada OIDC aceita só para `repo:CaminhoLivreGS/caminho-livre:environment:production`; papéis `AcrPush`, `Reader` (ACR) e `Website Contributor` (Web App) |
+| Log Analytics + Application Insights | Retenção de 30 dias, teto de 0,1 GB/dia, IP mascarado |
+| Alertas e Workbook | Ver [Pilar 3](#pilar-3-observabilidade) |
+| Budget da assinatura | US$ 10/mês, alertas em 50%, 80% e 100% do gasto real e 100% do previsto |
+
+**Regras exigidas:**
+- **`tfstate` e `.tfvars` fora do repositório:** o estado fica num Azure Blob Storage criado por [`infra/bootstrap/criar-backend-tfstate.sh`](infra/bootstrap/criar-backend-tfstate.sh). Esse Storage tem autenticação só por Entra ID (chaves desligadas), versionamento e soft delete de 14 dias. `backend.hcl`, `terraform.tfvars` e `*.tfstate` estão no [`.gitignore`](.gitignore); o repositório só tem o modelo `terraform.tfvars.example`.
+- **Portas de administração nunca abertas para `0.0.0.0/0`:** o App Service só expõe 80/443, e o HTTP é redirecionado para HTTPS. O site de administração (SCM/Kudu, por onde passa o SSH) é **negado para todos por padrão**. A variável `admin_cidrs` libera IPs específicos e sua validação **rejeita qualquer faixa maior que /16**, incluindo `0.0.0.0/0`.
 
 ```sh
-npm install        # dependência de desenvolvimento (OpenCV.js para os testes)
-npm run deps       # baixa opencv.js e os Haar Cascades, conferindo SHA-256
-npm start          # servidor local em http://127.0.0.1:8000
+az login
+sh infra/bootstrap/criar-backend-tfstate.sh          # uma vez: backend do tfstate
+cd infra/terraform
+cp terraform.tfvars.example terraform.tfvars         # preencha subscription_id e e-mail
+terraform init -backend-config=backend.hcl
+terraform plan -out=tfplan && terraform apply tfplan
+sh ../scripts/configurar-github.sh                   # cadastra secrets e variables no GitHub
 ```
 
-Abra http://127.0.0.1:8000/. A câmera ao vivo exige contexto seguro (HTTPS ou `localhost`/`127.0.0.1`). Para testar num Android via USB: `adb reverse tcp:8000 tcp:8000` e abra `http://localhost:8000` no celular.
+## Pilar 2: pipeline DevSecOps
 
-## Estrutura
+Workflow: [`.github/workflows/main.yml`](.github/workflows/main.yml). Roda em todo push (qualquer branch), em PR para a `main` e manualmente.
 
+| Job | O que faz | Bloqueia quando |
+|---|---|---|
+| Testes e build | 23 testes unitários do núcleo de visão + build de produção | Algum teste falha |
+| Terraform | `fmt -check` e `validate` | Formatação ou sintaxe inválida |
+| Observabilidade | `promtool check` e testes unitários das regras de alerta | Config ou regra inválida |
+| **Gitleaks** | Varre segredos em **todo o histórico** git | Encontra qualquer segredo |
+| **Semgrep** | SAST com regras de JavaScript, React, segredos, Dockerfile, nginx e Terraform | Achado de risco **ALTO ou CRÍTICO** (matriz de risco OWASP: probabilidade × impacto, em [`.github/scripts/semgrep_gate.py`](.github/scripts/semgrep_gate.py)) |
+| **Trivy** | CVEs da imagem Docker, segredos na imagem, misconfigurações de Dockerfile e Terraform, usuário non-root | CVE **HIGH ou CRITICAL** com correção disponível, ou misconfiguração HIGH/CRITICAL |
+| Gate de segurança | Consolida os resultados acima | Qualquer job anterior falhou |
+| Deploy (Azure) | Push da imagem aprovada para o ACR e atualização do Web App, com smoke test em `/healthz` | Só roda em push na `main` com o gate aprovado |
+
+**Controles do pipeline:**
+- Credenciais no **GitHub Secrets** (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, no environment `production`). São só identificadores: o login usa OIDC, sem senha de longa duração para vazar.
+- Todas as Actions de terceiros fixadas por SHA de commit e `permissions` mínimas por job.
+- A branch `main` é protegida: exige PR e o check "Gate de segurança"; force push e exclusão bloqueados, valendo também para admins.
+- O environment `production` só aceita deploy de branches protegidas.
+- Relatórios SARIF publicados no GitHub Code Scanning (aba Security) e como artefatos por 30 dias.
+- Riscos aceitos documentados em [`.trivyignore`](.trivyignore), com justificativa: o app é público e não exige login nem certificado de cliente.
+
+### Simulação de falha (evidência do bloqueio)
+
+1. Criar a branch `simulacao/falha-seguranca`.
+2. Adicionar um arquivo JavaScript com uma connection string falsa do Azure Storage (Gitleaks) e um `res.send()` com entrada do usuário mais um segredo JWT fixo no código (Semgrep, 2 achados ALTO).
+3. No `Dockerfile` da mesma branch, voltar o runtime para `nginxinc/nginx-unprivileged:1.27-alpine` e remover o `apk upgrade` (Trivy: 68 CVEs HIGH/CRITICAL).
+4. Abrir PR para a `main`: os três scanners reprovam, o gate mostra **DEPLOY BLOQUEADO** e o merge fica travado.
+5. Fechar o PR sem mesclar e apagar a branch. Assim o segredo falso nunca entra na `main`.
+
+## Pilar 3: observabilidade
+
+As **4 Métricas de Ouro** (Google SRE) são monitoradas em duas camadas:
+
+| Sinal | Azure Monitor (métrica do Web App) | Prometheus local |
+|---|---|---|
+| **Latência** | `HttpResponseTime` (média) e p50/p95/p99 dos logs HTTP | `probe_duration_seconds` (sonda externa, com as fases DNS/TCP/TLS/servidor) |
+| **Tráfego** | `Requests` | `nginx_http_requests_total` (req/s) |
+| **Erros** | `Http5xx`, `Http4xx`, `HealthCheckStatus` | `probe_success`, `probe_http_status_code` |
+| **Saturação** | `CpuTime` (métrica indicada para o plano F1) e `MemoryWorkingSet` | `nginx_connections_active` |
+
+**Azure Monitor** ([`infra/terraform/observabilidade.tf`](infra/terraform/observabilidade.tf)): um Workbook "Caminho Livre - Métricas de Ouro" no portal e 4 regras de alerta que enviam e-mail para a equipe:
+
+| Alerta | Condição | Severidade |
+|---|---|---|
+| Erros 5xx | Mais de 5 respostas 5xx em 5 minutos | 1 |
+| Latência | Tempo médio de resposta acima de 2 s em 5 minutos | 2 |
+| Saturação de CPU | Mais de 60 s de CPU em 15 minutos | 2 |
+| Disponibilidade | Health check abaixo de 100% em 5 minutos | 1 |
+
+**Prometheus + Grafana local** ([`observability/`](observability/)):
+- O Blackbox Exporter sonda a URL pública do Azure e o container local.
+- O dashboard do Grafana já vem configurado ao subir a stack.
+- 7 regras de alerta em [`regras/alertas.yml`](observability/prometheus/regras/alertas.yml): indisponibilidade, 5xx, latência, saturação de conexões, pico de tráfego, certificado TLS expirando e coletor fora do ar. Todas com testes unitários no CI.
+
+```sh
+openssl rand -base64 24 > observability/grafana/admin-password   # senha do Grafana (fora do git)
+sh infra/scripts/configurar-observabilidade.sh                  # aponta as sondas para a URL do Azure
+docker compose --profile observability up --build -d
+# Grafana: http://127.0.0.1:3000 | Prometheus/alertas: http://127.0.0.1:9090/alerts
 ```
-index.html, app/          interface acessível (Foto → Tipo → Resultado → Enviado)
-src/vision/
-  VisionPipeline.js       ponto de entrada: reexporta a API pública
-  pipeline/
-    config.js             CATEGORIAS e CONFIG (todos os limiares)
-    memoria.js            Rastreador (libera toda cv.Mat em finally)
-    opencv.js, cascades.js  inicialização do OpenCV e dos Haar Cascades
-    util.js               utilitários de imagem e desenho
-    lgpd.js               rostos (Haar), placas (Haar + agrupamento de caracteres) e borrão
-    prevalidacao.js       nitidez, exposição, cena, dHash
-    superficie.js         estimativa do piso (usada por obstáculo e acessibilidade)
-    piso.js               buraco / calçada quebrada
-    rachaduras.js         rachaduras finas (black-hat + forma do traço)
-    acessibilidade.js, obstaculo.js, alagamento.js   pipelines por categoria
-    analise.js            orquestração e decisão em 3 níveis (sem DOM)
-    navegador.js          camada com DOM (<img>, <canvas>)
-  AnalisadorVisao.js      API da interface; delega o OpenCV a um Web Worker
-  vision.worker.js        worker que carrega opencv.js e roda o núcleo
-  useVisionPipeline.js    hook React (para a futura versão em React)
-avaliacao.html            avaliação de precisão contra o dataset rotulado
-dataset/                  fotos de teste (Commons), gabarito e créditos
-scripts/                  download de dependências e teste de precisão
-test/                     testes unitários e limites de regressão
-```
 
-## Como a validação funciona
+**Evidência:** em uma queda simulada (container parado), o alerta `AplicacaoIndisponivel` passou de *pending* para *firing* em 2 minutos, e o dashboard registrou a queda: [`docs/evidencias/grafana-metricas-de-ouro-queda-simulada.png`](docs/evidencias/grafana-metricas-de-ouro-queda-simulada.png).
 
-O usuário escolhe uma de **3 categorias**: Acessibilidade (buraco, calçada quebrada, degrau, piso tátil interrompido, passagem bloqueada), Obstáculo (obra, entulho, lixo, árvore caída) e Alagamento.
+Como a visão computacional roda no celular do cidadão, a CPU do container é usada só para servir arquivos estáticos. Por isso, os alertas principais são de erros e latência, e o de CPU (`CpuTime`) protege a cota de 60 minutos de CPU por dia do plano F1.
 
-1. **Pré-validação:** nitidez (variância do Laplaciano), exposição, resolução, foto fora de contexto (textura e áreas lisas), selfie (rosto dominante confirmado por 2 cascades) e reenvio (hash perceptual dHash).
-2. **Pipeline da categoria:** filtros espaciais, Canny, morfologia, limiarização HSV, componentes conexos, Hough e casamento de silhueta. Nenhuma rede neural; a única IA treinada é o Haar Cascade, usado só na LGPD.
-3. **Decisão em 3 níveis:** `CONFIRMADO` (evidência encontrada), `INCONCLUSIVO` (foto boa sem evidência automática → moderação humana) ou `REJEITADO` (problema claro com a foto, com orientação para tirar outra).
-4. **LGPD:** rostos e placas são borrados por último, com blur proporcional ao tamanho; o usuário pode borrar áreas extras (toque, botões ou teclado). O envio usa o canvas anonimizado, sem metadados EXIF. Placas brasileiras são encontradas por agrupamento de caracteres (limiar adaptativo + cadeia de 5 ou mais componentes alinhados), porque o Haar disponível é de placa russa.
+## Estimativa de custos (Azure)
 
-Todo `cv.Mat` é liberado em `try/finally` (classe `Rastreador`), porque o WebAssembly não tem coleta de lixo para matrizes.
+Preços de tabela em USD, região `eastus`, consultados em [prices.azure.com](https://prices.azure.com/api/retail/prices) em 13/11/2026. A assinatura Azure for Students só permite as regiões `eastus`, `southcentralus`, `canadacentral`, `mexicocentral` e `southafricanorth`.
 
-## Precisão medida
-
-Em 63 fotos distintas do Wikimedia Commons, rotuladas por categoria em `dataset/manifest.json` (35 em Acessibilidade, 29 em Obstáculo, 23 em Alagamento; uma mesma foto pode ser negativa em várias):
-
-| Categoria | Acurácia | Falsos positivos | Fotos reais rejeitadas |
+| Recurso | SKU | Preço unitário | Custo/mês (MVP) |
 |---|---|---|---|
-| Acessibilidade | 65,7% | 5 de 15 | 0 |
-| Obstáculo | 89,7% | 1 de 14 | 0 |
-| Alagamento | 87,0% | 0 de 14 | 0 |
+| App Service Plan Linux | **F1 (Free)** | US$ 0 | **US$ 0,00** |
+| Azure Container Registry | Basic (10 GB inclusos) | US$ 0,1666/dia | **US$ 5,00** |
+| Log Analytics | Pay-as-you-go | 5 GB/mês grátis; depois US$ 2,30/GB | **US$ 0,00** (teto de 0,1 GB/dia ≈ 3 GB/mês) |
+| Application Insights + Workbook | Baseado em workspace | Incluso no Log Analytics | **US$ 0,00** |
+| Alertas de métrica (4 regras) | | 10 primeiras grátis; depois US$ 0,10/mês | **US$ 0,00** |
+| Action group (e-mail) | | 1.000 e-mails/mês grátis | **US$ 0,00** |
+| Storage do tfstate | Standard LRS | Poucos KB | **< US$ 0,01** |
+| Identidades, RBAC, budget | | Sem custo | **US$ 0,00** |
+| **Total** | | | **≈ US$ 5,00/mês (≈ US$ 0,17/dia)** |
 
-O detector de rachaduras foi calibrado com poucos exemplos (4 fotos de rachadura no gabarito atual).
+**Cenário de produção (referência):** App Service B1 (US$ 0,017/h ≈ US$ 12,41/mês), que adiciona Always On, sem cold start e com SLA, totalizando **≈ US$ 17,40/mês**.
 
-**Placas (LGPD):** em 21 composições (7 placas brasileiras reais coladas em fotos de rua, 3 tamanhos e ângulos), o borrão cobre 17 placas (só com o Haar russo: 7). Em compensação, nas 63 fotos de rua, a área borrada sem necessidade é em média 0,47% da imagem, em geral texto de letreiros. Placas vermelhas antigas, de letras grossas, ainda falham.
+**Estratégia de economia:**
+- F1 gratuito no MVP.
+- Teto diário de ingestão de logs.
+- Budget com alertas por e-mail.
+- `terraform destroy` fora das janelas de avaliação; o ACR é o único custo fixo.
+- [`infra/scripts/custos.sh`](infra/scripts/custos.sh) mostra o gasto real do mês por recurso (Cost Management).
 
-**Dataset público sem pessoas (LGPD):** o repositório é público, então fotos com pessoas (rostos, retratos, selfies e pedestres, mesmo distantes) foram retiradas do dataset versionado, embora tenham licença livre no Commons. Por isso as avaliações `LGPD` (borrão de rostos em fotos reais) e `RETRATOS` não têm mais fotos aqui, e o filtro de foto fora de contexto é medido em só 6 fotos. A função de borrão (`anonimizar`) continua coberta pelos testes unitários com imagens sintéticas; já a detecção de rostos em fotos reais só pode ser calibrada com um conjunto local, fora do git.
+## Modelo de responsabilidade compartilhada
 
-**Limitação importante:** os parâmetros foram calibrados e medidos no mesmo conjunto, com fotos majoritariamente estrangeiras. Os números são otimistas até existir um conjunto de teste separado com fotos de calçadas brasileiras.
+O Azure App Service é um serviço **PaaS**: a Microsoft opera a plataforma e a equipe responde pelo que roda nela e por como ela é configurada.
 
-### Dataset brasileiro (treino/teste)
+| Camada | Microsoft (provedor) | Equipe Caminho Livre (cliente) | Como fazemos |
+|---|---|---|---|
+| Datacenter, hardware e rede física | ✅ | | |
+| Sistema operacional do host e virtualização | ✅ | | |
+| Runtime do App Service, balanceador, patches da plataforma | ✅ | | |
+| Certificado TLS do domínio `*.azurewebsites.net` | ✅ | | |
+| **Imagem do container** (SO base, pacotes, nginx) | | ✅ | Trivy bloqueia CVEs HIGH/CRITICAL; `apk upgrade` no build; base Alpine atualizada |
+| **Código da aplicação** | | ✅ | Semgrep (SAST), testes unitários, revisão por PR |
+| **Segredos e credenciais** | | ✅ | Gitleaks no histórico; OIDC sem senha; GitHub Secrets; ACR sem admin |
+| **Identidade e acesso** (RBAC) | Fornece o Entra ID e o RBAC | ✅ Configura | Menor privilégio: `AcrPull`, `AcrPush`, `Website Contributor` restritos ao recurso |
+| **Configuração de rede e exposição** | Fornece os controles | ✅ Configura | HTTPS obrigatório, TLS 1.2, SCM/SSH negado por padrão, sem `0.0.0.0/0` |
+| **Dados e privacidade (LGPD)** | Protege a infraestrutura onde os dados ficam | ✅ | Anonimização no aparelho, IP mascarado no App Insights, retenção limitada |
+| **Monitoramento e resposta** | Fornece o Azure Monitor | ✅ Configura e responde | Métricas de Ouro, 4 alertas por e-mail, budget |
+| **Estado da infraestrutura** | Durabilidade do Blob Storage | ✅ | tfstate remoto, sem chaves, versionado, fora do git |
 
-1. Coloque as fotos em `dataset/brasil/<categoria>/positivo/` (com o problema) ou `.../negativo/` (sem o problema, por exemplo uma calçada em bom estado). Categorias: `acessibilidade`, `obstaculo`, `alagamento`. Recomendado: 40 ou mais fotos por categoria, metade de cada tipo.
-2. Rode `npm run dataset:brasil`. Cerca de 30% das fotos vão para **teste**, sorteadas pelo hash do conteúdo (renomear não muda o sorteio).
-3. Calibre olhando só o **treino**: `http://127.0.0.1:8000/avaliacao.html?dataset=brasil&conjunto=treino&cat=ACESSIBILIDADE&mostrar=1`.
-4. No fim, meça a precisão real no **teste**: `npm run test:precisao -- --dataset=brasil --conjunto=teste`. Se ajustar os limiares olhando os erros do teste, ele deixa de medir a precisão real.
+Se o produto migrasse para IaaS (máquinas virtuais), o patch do sistema operacional, o firewall do host e o SSH passariam a ser responsabilidade da equipe. Por isso o PaaS foi escolhido para o MVP.
 
-Não adicione fotos com pessoas: o repositório é público e as fotos ficam salvas no histórico do git.
+## Estratégia de LGPD
 
-## Testes
+**Princípios aplicados (art. 6º):** finalidade, necessidade (minimização), segurança e prevenção.
 
-```sh
-npm test                                  # unitários do núcleo, ~30 s (Node, sem navegador)
-npm run test:precisao                     # regressão de precisão no Chrome headless, ~8 min
-npm run test:precisao -- --so=ALAGAMENTO  # só uma avaliação
-npm run test:precisao -- --completo       # inclui os filtros de qualidade, ~20 min
+1. **Anonimização antes de sair do aparelho.** A foto é processada no navegador do cidadão, num Web Worker com OpenCV.js. Rostos (frontal e perfil) e placas de veículos são detectados e **borrados**, e o cidadão pode borrar áreas extras manualmente. Só a imagem já anonimizada pode ser enviada.
+2. **Sem metadados.** O envio usa o canvas re-renderizado, então os dados EXIF (GPS do aparelho, modelo da câmera, data) são descartados.
+3. **Nenhuma foto no servidor, no MVP.** O backend de denúncias ainda não existe (`ENDPOINT_DENUNCIAS = null` em `app/app.js`), e o app roda em modo demonstração: **nada sai do aparelho**. O container no Azure só entrega arquivos estáticos e não recebe uploads (`client_max_body_size 1m`).
+4. **Trânsito protegido.** HTTPS obrigatório com TLS 1.2+ e HSTS. A CSP `connect-src 'self'` impede que o código envie dados para outros domínios.
+5. **Telemetria mínima.** Não há cookies de rastreamento nem SDK de analytics no front-end, e o Application Insights mascara o IP. Os logs HTTP do App Service (URL, status, IP de origem e user agent) servem só para segurança e operação (legítimo interesse, art. 7º, IX), com retenção de 30 dias no Log Analytics e 3 dias no sistema de arquivos.
+6. **Dataset sem pessoas.** O repositório é público, então todas as fotos com pessoas identificáveis foram retiradas do dataset de testes, mesmo tendo licença livre.
+7. **Região de dados.** A política da assinatura acadêmica não permite `brazilsouth`, por isso a infraestrutura fica em `eastus`. Como as fotos não vão para a nuvem, só os logs operacionais acima ficam fora do Brasil, sob as cláusulas contratuais de proteção de dados da Microsoft (art. 33). Em produção, a recomendação é migrar para `brazilsouth`.
+
+**Próximos passos para o backend:** autenticação do cidadão, limite de envios, deduplicação pelo hash perceptual, fila de moderação para casos `INCONCLUSIVO`, criptografia em repouso das imagens já anonimizadas, política de retenção e canal para os direitos do titular (art. 18).
+
+## Evidências para a avaliação
+
+| Requisito | Onde verificar |
+|---|---|
+| Pipeline verde com os 3 scanners em paralelo | [Aba Actions](https://github.com/CaminhoLivreGS/caminho-livre/actions) |
+| Relatórios dos scanners | Aba Security → Code scanning e artefatos de cada execução |
+| Bloqueio automático por vulnerabilidade | PR da [simulação de falha](#simulação-de-falha-evidência-do-bloqueio) |
+| Container non-root | Passo "Verificar usuário non-root" no job do Trivy |
+| tfstate remoto e `.tfvars` fora do git | [`.gitignore`](.gitignore) e [`infra/terraform/versions.tf`](infra/terraform/versions.tf) (backend `azurerm`) |
+| SSH/administração fechada | `scm_ip_restriction_default_action = "Deny"` e validação de `admin_cidrs` em [`infra/terraform/`](infra/terraform/) |
+| Métricas de Ouro e alerta disparado | [`docs/evidencias/`](docs/evidencias/) |
+
+## Estrutura do repositório
+
 ```
-
-O teste de precisão falha se algum número ficar abaixo de `test/limites-precisao.json`. Ao melhorar um pipeline, atualize esses limites. Para inspecionar visualmente: `http://127.0.0.1:8000/avaliacao.html?cat=ACESSIBILIDADE&mostrar=1`. Parâmetros podem ser sobrescritos pela URL, por exemplo `&cfg={"ALAGAMENTO":{"AREA_MINIMA_RATIO":0.1}}`.
-
-## Segurança
-
-A validação no navegador orienta o usuário e evita envios por engano, mas **não protege o backend**: qualquer pessoa pode chamar a API diretamente. O backend (ainda não implementado; `ENDPOINT_DENUNCIAS` em `app/app.js`) precisa de autenticação, limite de envios por usuário, deduplicação pelo `hash` enviado e fila de moderação para os casos `INCONCLUSIVO`.
-
-O servidor de desenvolvimento escuta só em `127.0.0.1`.
+.github/workflows/main.yml     pipeline DevSecOps
+.github/scripts/               gate de risco do Semgrep
+Dockerfile, .dockerignore      imagem non-root
+docker/nginx/                  configuração e headers de segurança do nginx
+docker-compose.yml             stack local (app + observabilidade)
+infra/bootstrap/               criação do backend remoto do tfstate
+infra/terraform/               ACR, Web App, OIDC, observabilidade, alertas, budget
+infra/scripts/                 cadastro de secrets no GitHub, sondas e custos
+observability/                 Prometheus, Blackbox, regras de alerta e Grafana
+docs/                          visão computacional e evidências
+app/, src/, index.html         aplicação (interface + visão computacional)
+dataset/, scripts/, test/      dataset de avaliação, utilitários e testes
+```
 
 ## Créditos
 

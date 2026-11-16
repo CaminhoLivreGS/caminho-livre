@@ -13,7 +13,7 @@
 # =============================================================================
 set -eu
 
-REGIAO="${1:-brazilsouth}"
+REGIAO="${1:-eastus}"   # regiões permitidas pela política da assinatura
 RG="rg-caminholivre-tfstate"
 CONTAINER="tfstate"
 RAIZ="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -31,6 +31,13 @@ CONTA="stcltfstate${SUFIXO}"
 echo "Assinatura: $ASSINATURA"
 echo "Região:     $REGIAO"
 echo "Storage:    $CONTA (RG $RG)"
+
+# Assinaturas novas (ex.: Azure for Students) vêm sem o provider de Storage
+# registrado; sem isso a criação falha com "SubscriptionNotFound".
+if [ "$(az provider show --namespace Microsoft.Storage --query registrationState -o tsv)" != "Registered" ]; then
+  echo "Registrando o resource provider Microsoft.Storage (gratuito, ~1 min)..."
+  az provider register --namespace Microsoft.Storage --wait
+fi
 
 az group create --name "$RG" --location "$REGIAO" \
   --tags projeto=caminho-livre finalidade=terraform-state --output none
