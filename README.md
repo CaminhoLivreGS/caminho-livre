@@ -90,7 +90,7 @@ flowchart LR
 | Azure Container Registry (Basic) | Sem usuário admin e sem pull anônimo; acesso só por RBAC |
 | App Service Plan Linux (F1) + Web App for Containers | HTTPS obrigatório, TLS 1.2+, FTP e WebDeploy com senha desligados, health check em `/healthz` |
 | Identidade gerenciada do Web App | Papel `AcrPull` no ACR (sem senha de registry) |
-| Identidade do pipeline | Credencial federada OIDC aceita só para `repo:CaminhoLivreGS/caminho-livre:environment:production`; papéis `AcrPush`, `Reader` (ACR) e `Website Contributor` (Web App) |
+| Identidade do pipeline | Credencial federada OIDC aceita só para `repo:CaminhoLivreGS@355958631/caminho-livre@1456200921:environment:production`. Os IDs imutáveis impedem que um repositório recriado com o mesmo nome herde o acesso. Papéis `AcrPush`, `Reader` (ACR) e `Website Contributor` (Web App) |
 | Log Analytics + Application Insights | Retenção de 30 dias, teto de 0,1 GB/dia, IP mascarado |
 | Alertas e Workbook | Ver [Pilar 3](#pilar-3-observabilidade) |
 | Budget da assinatura | US$ 10/mês, alertas em 50%, 80% e 100% do gasto real e 100% do previsto |
