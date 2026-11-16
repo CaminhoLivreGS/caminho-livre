@@ -420,17 +420,28 @@ jobs:
       name: production
       url: ${{ steps.smoke.outputs.url }}
     steps:
+      # A identidade de deploy só tem papéis no ACR e no Web App. Com a infra
+      # desligada ela não enxerga a assinatura; o login é permitido assim e o
+      # próximo passo trata o caso como "infra desligada".
       - name: Login no Azure (OIDC, sem senha)
         uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          allow-no-subscriptions: true
 
       - name: Localizar a infraestrutura (tag projeto=caminho-livre)
         id: infra
+        env:
+          ASSINATURA: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           set -euo pipefail
+          if ! az account set --subscription "$ASSINATURA" 2>/dev/null; then
+            echo "existe=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Infraestrutura desligada (a identidade de deploy não tem acesso a nenhum recurso). Deploy não executado."
+            echo "⏸️ **Infraestrutura desligada:** deploy não executado. Ligue com o workflow *Infra (Terraform)*, ação \`apply\`." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           # A identidade de deploy só enxerga o ACR e o Web App do projeto.
           app="$(az webapp list --query "[?tags.projeto=='caminho-livre'] | [0].name" -o tsv)"
           rg="$(az webapp list --query "[?tags.projeto=='caminho-livre'] | [0].resourceGroup" -o tsv)"
