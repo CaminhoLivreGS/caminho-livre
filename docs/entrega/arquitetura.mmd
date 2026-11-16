@@ -1,0 +1,43 @@
+flowchart LR
+  subgraph Celular["Celular do cidadão (navegador)"]
+    UI["Interface acessível<br/>index.html + app.js"]
+    W["Web Worker<br/>OpenCV.js (WebAssembly)"]
+    L["LGPD: borra rostos e placas<br/>e remove metadados EXIF"]
+    UI -->|foto| W --> L -->|imagem anonimizada| UI
+  end
+
+  subgraph GitHub["GitHub (CaminhoLivreGS/caminho-livre)"]
+    GA["GitHub Actions<br/>testes, Terraform, Prometheus,<br/>Gitleaks, Semgrep, Trivy"]
+    G{"Gate de segurança"}
+    TF["Infra (Terraform)<br/>plan automático,<br/>apply com aprovação"]
+    GA --> G
+  end
+
+  subgraph Azure["Microsoft Azure (eastus)"]
+    ACR["Azure Container Registry<br/>sem usuário admin"]
+    APP["App Service Linux F1<br/>Web App for Containers<br/>nginx non-root :8080"]
+    MON["Azure Monitor<br/>Log Analytics + App Insights<br/>Workbook + 4 alertas"]
+    KV["Key Vault (RBAC)<br/>connection string"]
+    ACR -->|"pull (identidade gerenciada)"| APP
+    APP -->|métricas e logs| MON
+    KV -->|"Key Vault Reference (identidade gerenciada)"| APP
+  end
+
+  subgraph Fundacao["Fundação Azure (nunca destruída)"]
+    ST[("Blob Storage<br/>tfstate remoto")]
+    ID["3 identidades OIDC<br/>deploy, plan, apply"]
+  end
+
+  subgraph Local["Máquina da equipe"]
+    P["Prometheus + Blackbox"] --> GR["Grafana"]
+  end
+
+  G -->|"aprovado: push da imagem (OIDC)"| ACR
+  G -->|"aprovado: deploy (OIDC)"| APP
+  G -.->|reprovado| X["Deploy bloqueado"]
+  UI <-->|HTTPS| APP
+  MON -->|e-mail| E["Equipe"]
+  TF -->|estado| ST
+  TF -->|"provisiona (OIDC)"| ACR
+  ID -.->|identidades| GA
+  P -->|sonda HTTPS| APP

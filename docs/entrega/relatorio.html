@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Caminho Livre - Relatório Secure DevOps Tools &amp; Cloud Computing</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm;
+    @bottom-right { content: "Página " counter(page) " de " counter(pages); font: 9pt Helvetica, Arial, sans-serif; color: #666; }
+    @bottom-left { content: "Caminho Livre - Secure DevOps Tools & Cloud Computing"; font: 9pt Helvetica, Arial, sans-serif; color: #666; } }
+  @page :first { @bottom-right { content: none; } @bottom-left { content: none; } }
+  * { box-sizing: border-box; }
+  body { font: 10.5pt/1.45 Helvetica, Arial, sans-serif; color: #1a1a1a; margin: 0; }
+  h1 { font-size: 18pt; color: #22489a; border-bottom: 2px solid #22489a; padding-bottom: 4px; margin: 0 0 10px; break-after: avoid; }
+  h2 { font-size: 13pt; color: #22489a; margin: 16px 0 6px; break-after: avoid; }
+  h3 { font-size: 11pt; margin: 12px 0 4px; break-after: avoid; }
+  p { margin: 0 0 7px; text-align: justify; }
+  ul, ol { margin: 0 0 8px; padding-left: 20px; } li { margin-bottom: 3px; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 9.5pt; break-inside: auto; }
+  th, td { border: 1px solid #c8cfdc; padding: 4px 6px; vertical-align: top; text-align: left; }
+  th { background: #e9eef8; } tr { break-inside: avoid; }
+  code { font: 9pt Menlo, Consolas, monospace; background: #f2f4f8; padding: 0 3px; border-radius: 2px; }
+  pre { font: 8.5pt Menlo, Consolas, monospace; background: #f2f4f8; padding: 8px; border-radius: 4px; white-space: pre-wrap; break-inside: avoid; }
+  .secao { break-before: page; }
+  .nota { background: #fff7e0; border-left: 4px solid #e0a800; padding: 6px 10px; margin: 8px 0; font-size: 9.5pt; }
+  .ok { background: #e8f6ec; border-left: 4px solid #2e8b57; padding: 6px 10px; margin: 8px 0; font-size: 9.5pt; }
+  figure { margin: 8px 0 14px; break-inside: avoid; text-align: center; }
+  figure img { max-width: 100%; max-height: 205mm; border: 1px solid #c8cfdc; }
+  figcaption { font-size: 9pt; color: #444; margin-top: 4px; text-align: left; }
+  /* Capa */
+  .capa { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; text-align: center; }
+  .capa .topo { font-size: 12pt; letter-spacing: 1px; color: #444; margin-top: 10mm; }
+  .capa .titulo { font-size: 34pt; font-weight: bold; color: #22489a; margin-bottom: 4mm; }
+  .capa .sub { font-size: 14pt; color: #333; }
+  .capa .grupo { font-size: 12pt; line-height: 1.8; }
+  .capa .rodape { font-size: 10pt; color: #555; margin-bottom: 6mm; }
+  .sumario li { margin-bottom: 4px; }
+  .duas { display: flex; gap: 10px; } .duas figure { flex: 1; }
+  .compacta table { font-size: 8.5pt; margin: 4px 0; } .compacta th, .compacta td { padding: 2px 5px; }
+  .compacta li { margin-bottom: 1px; } .compacta figure { margin: 4px 0 8px; } .compacta p, .compacta ol { font-size: 9.5pt; }
+</style>
+</head>
+<body>
+
+<!-- ============================== CAPA ============================== -->
+<section class="capa">
+  <div class="topo">FIAP<br>Secure DevOps Tools &amp; Cloud Computing</div>
+  <div>
+    <div class="titulo">Caminho Livre</div>
+    <div class="sub">App colaborativo de acessibilidade urbana com visão computacional<br>e pipeline DevSecOps no Microsoft Azure</div>
+  </div>
+  <div class="grupo"><strong>Integrantes</strong><br>Gilson Dias<br>Gabriel de Mendonça<br>Isabelle Toricelli</div>
+  <div class="rodape">
+    Repositório: https://github.com/CaminhoLivreGS/caminho-livre<br>
+    Aplicação: https://app-caminholivre-prod-00e44e.azurewebsites.net<br>
+    Novembro de 2026
+  </div>
+</section>
+
+<!-- ============================== SUMÁRIO ============================== -->
+<section class="secao">
+<h1>Sumário</h1>
+<ol class="sumario">
+  <li>Ficha técnica do MVP</li>
+  <li>Arquitetura</li>
+  <li>Pilar 1: container e infraestrutura como código</li>
+  <li>Pilar 2: pipeline DevSecOps</li>
+  <li>Pilar 3: observabilidade</li>
+  <li>Cofre de segredos (Azure Key Vault)</li>
+  <li>Estimativa de custos (Azure)</li>
+  <li>Modelo de responsabilidade compartilhada</li>
+  <li>Estratégia de LGPD</li>
+  <li>Riscos aceitos</li>
+  <li>Evidências</li>
+  <li>Como reproduzir</li>
+</ol>
+<p>Todo o código, os workflows e a infraestrutura descritos aqui estão no repositório público. Os links de execuções do GitHub Actions citados permitem conferir cada evidência diretamente.</p>
+</section>
+
+<!-- ============================== 1. FICHA ============================== -->
+<section class="secao">
+<h1>1. Ficha técnica do MVP</h1>
+<table>
+<tr><th style="width:24%">Item</th><th>Descrição</th></tr>
+<tr><td><strong>Nome do produto</strong></td><td>Caminho Livre</td></tr>
+<tr><td><strong>Cidadão</strong></td><td>Pedestres com deficiência (visual, física, cadeirantes) e com mobilidade reduzida (idosos, gestantes, pessoas com carrinho de bebê), que dependem de calçadas transitáveis.</td></tr>
+<tr><td><strong>Problema</strong></td><td>Buracos, calçadas quebradas, degraus, piso tátil interrompido, obstáculos e alagamentos impedem a circulação. As denúncias chegam ao poder público sem evidência confiável, duplicadas ou com fotos que expõem pessoas e placas de veículos.</td></tr>
+<tr><td><strong>Proposta de valor</strong></td><td>Denunciar um problema em 4 passos (Foto, Tipo, Resultado, Enviado), com interface acessível (WCAG 2.1, teclado e leitor de tela). A visão computacional confirma a evidência e anonimiza a foto no próprio aparelho, gerando denúncias verificadas e em conformidade com a LGPD.</td></tr>
+<tr><td><strong>Arquitetura</strong></td><td>SPA (Vite + JavaScript) com OpenCV.js em Web Worker, servida por nginx non-root em container. Azure App Service (Web App for Containers), Container Registry e Key Vault, provisionados por Terraform, com pipeline DevSecOps no GitHub Actions e observabilidade no Azure Monitor e em Prometheus/Grafana.</td></tr>
+<tr><td><strong>Fontes de dados</strong></td><td>Fotos enviadas pelo cidadão (processadas só no aparelho). Calibração e testes com 101 fotos de licença livre do Wikimedia Commons, sem pessoas identificáveis. Estrutura pronta para um dataset brasileiro de treino/teste.</td></tr>
+<tr><td><strong>Modelos de IA</strong></td><td>Visão computacional clássica: Canny, morfologia, limiarização HSV, componentes conexos, Hough e hash perceptual (dHash). Única IA treinada: Haar Cascades do OpenCV 4.9.0 (rosto frontal, perfil e placa), usada só para anonimização. Placas brasileiras detectadas por agrupamento de caracteres.</td></tr>
+<tr><td><strong>URL</strong></td><td>https://app-caminholivre-prod-00e44e.azurewebsites.net (no ar durante a avaliação; fora dela, desligada para poupar créditos e religada pelo GitHub Actions em cerca de 15 minutos).</td></tr>
+<tr><td><strong>Indicadores de impacto</strong></td><td><strong>Medidos hoje:</strong> acurácia de 65,7% (Acessibilidade), 89,7% (Obstáculo) e 87,0% (Alagamento); 17 de 21 placas brasileiras borradas; 0 fotos reais rejeitadas indevidamente.<br><strong>Metas para o piloto:</strong> denúncias validadas por mês; % confirmadas automaticamente; tempo médio até o encaminhamento à prefeitura; 100% das fotos enviadas anonimizadas; disponibilidade ≥ 99% e latência p95 &lt; 2 s.</td></tr>
+<tr><td><strong>ODS</strong></td><td><strong>ODS 10, Redução das desigualdades</strong> (meta 10.2: inclusão de pessoas com deficiência).<br><strong>ODS 11, Cidades e comunidades sustentáveis</strong> (meta 11.2: mobilidade acessível; meta 11.7: espaços públicos seguros, inclusivos e acessíveis).</td></tr>
+</table>
+</section>
+
+<!-- ============================== 2. ARQUITETURA ============================== -->
+<section class="secao compacta">
+<h1>2. Arquitetura</h1>
+<figure><img src="arquitetura.png" alt="Diagrama de arquitetura"><figcaption>Figura 1. Arquitetura do Caminho Livre (fonte Mermaid em <code>docs/entrega/arquitetura.mmd</code> e no README).</figcaption></figure>
+<h2>Fluxo</h2>
+<ol>
+  <li>Todo push dispara o pipeline. Testes, validação do Terraform e os scanners de segurança (Gitleaks, Semgrep e Trivy) rodam em paralelo.</li>
+  <li>Se qualquer verificação falhar, o <strong>Gate de segurança</strong> reprova e o deploy não acontece.</li>
+  <li>Na branch <code>main</code>, a mesma imagem analisada pelo Trivy vai para o Azure Container Registry com a tag do commit, e o Web App é atualizado. O login no Azure é feito por OIDC, sem senha guardada.</li>
+  <li>A infraestrutura é provisionada pelo workflow <em>Infra (Terraform)</em>: <code>plan</code> automático e <code>apply</code>/<code>destroy</code> manuais, com aprovação de um revisor.</li>
+  <li>A foto do cidadão é analisada e anonimizada no navegador. O servidor só entrega arquivos estáticos.</li>
+</ol>
+<h2>Componentes</h2>
+<table>
+<tr><th>Componente</th><th>Tecnologia</th><th>Função</th></tr>
+<tr><td>Aplicação</td><td>Vite, JavaScript, OpenCV.js 4.9 (WebAssembly)</td><td>Interface acessível e visão computacional no Web Worker</td></tr>
+<tr><td>Container</td><td>nginx-unprivileged 1.30 (Alpine 3.24), UID 101</td><td>Servir os arquivos estáticos com headers de segurança</td></tr>
+<tr><td>Hospedagem</td><td>Azure App Service Linux F1 (Web App for Containers)</td><td>Executar o container com HTTPS e health check</td></tr>
+<tr><td>Registro</td><td>Azure Container Registry Basic</td><td>Imagens versionadas pelo SHA do commit</td></tr>
+<tr><td>Segredos</td><td>Azure Key Vault (RBAC)</td><td>Configuração sensível, lida por Key Vault Reference</td></tr>
+<tr><td>Observabilidade</td><td>Azure Monitor, Log Analytics, App Insights; Prometheus, Blackbox, Grafana</td><td>Métricas de Ouro, alertas e painéis</td></tr>
+<tr><td>IaC</td><td>Terraform 1.17 + azurerm 5.13, estado no Blob Storage</td><td>Provisionamento reproduzível</td></tr>
+<tr><td>CI/CD</td><td>GitHub Actions, Gitleaks 8.30, Semgrep 1.166, Trivy 0.71</td><td>Testes, segurança, deploy e infraestrutura</td></tr>
+</table>
+</section>
+
+<!-- ============================== 3. PILAR 1 ============================== -->
+<section class="secao">
+<h1>3. Pilar 1: container e infraestrutura como código</h1>
+<h2>Dockerfile</h2>
+<ul>
+  <li><strong>Multi-stage:</strong> Node 22 só para compilar; o runtime é <code>nginx-unprivileged</code> com o bundle estático (cerca de 35 MB).</li>
+  <li><strong>Usuário non-root</strong> (UID 101), porta 8080. O pipeline verifica e falha se a imagem rodar como root.</li>
+  <li><strong>Sem segredos na imagem:</strong> nenhuma credencial em <code>ARG</code>/<code>ENV</code>; o <code>.dockerignore</code> exclui <code>.env</code>, <code>*.tfvars</code> e <code>*.tfstate</code>.</li>
+  <li><code>apk upgrade</code> no build e base atualizada: 0 CVEs HIGH/CRITICAL no Trivy.</li>
+  <li>Dependências binárias (Haar Cascades) baixadas com verificação de SHA-256.</li>
+  <li>Headers de segurança no nginx: CSP sem <code>unsafe-inline</code>, HSTS, <code>X-Frame-Options: DENY</code>, <code>Permissions-Policy</code> limitando a câmera à própria origem.</li>
+</ul>
+<h2>Docker Compose</h2>
+<p>O <code>docker compose up --build -d</code> sobe o app; com <code>--profile observability</code>, sobe também Prometheus, Blackbox, nginx-exporter e Grafana. Portas publicadas só em <code>127.0.0.1</code>, sistema de arquivos read-only, <code>cap_drop: ALL</code>, <code>no-new-privileges</code> e limites de CPU e memória. A senha do Grafana é um Docker secret, fora do git.</p>
+<h2>Terraform</h2>
+<table>
+<tr><th>Recurso</th><th>Configuração de segurança</th></tr>
+<tr><td>Container Registry (Basic)</td><td>Sem usuário admin e sem pull anônimo; acesso só por RBAC</td></tr>
+<tr><td>App Service Plan F1 + Web App</td><td>HTTPS obrigatório, TLS 1.2+, FTP e WebDeploy com senha desligados, health check em <code>/healthz</code>, pull do ACR pela identidade gerenciada (<code>AcrPull</code>)</td></tr>
+<tr><td>Key Vault</td><td>Autorização só por RBAC; ver seção 6</td></tr>
+<tr><td>Log Analytics + App Insights</td><td>Retenção de 30 dias, teto de 0,1 GB/dia, IP mascarado</td></tr>
+<tr><td>Alertas e Workbook</td><td>4 alertas de métrica com e-mail; ver seção 5</td></tr>
+<tr><td>Budget da assinatura</td><td>US$ 10/mês, alertas em 50%, 80% e 100% do gasto real e 100% do previsto</td></tr>
+</table>
+<h2>Regras exigidas</h2>
+<ul>
+  <li><strong><code>tfstate</code> e <code>.tfvars</code> fora do repositório:</strong> o estado fica num Azure Blob Storage com autenticação só por Entra ID (chaves desligadas), versionamento e soft delete de 14 dias. <code>backend.hcl</code>, <code>terraform.tfvars</code> e <code>*.tfstate</code> estão no <code>.gitignore</code>; no CI, as variáveis vêm de GitHub Secrets e Variables.</li>
+  <li><strong>Portas de administração nunca abertas para <code>0.0.0.0/0</code>:</strong> o App Service só expõe 80/443 (HTTP redireciona para HTTPS). O site de administração (SCM/Kudu, por onde passa o SSH) é negado para todos por padrão; com a infra no ar, ele respondeu <strong>HTTP 403</strong> a acessos pela internet. A variável <code>admin_cidrs</code> libera IPs específicos, e sua validação rejeita qualquer faixa maior que /16, incluindo <code>0.0.0.0/0</code>.</li>
+</ul>
+<h2>Fundação e identidades do pipeline</h2>
+<p>O tfstate e as 3 identidades do GitHub ficam num resource group que nunca é destruído (<code>infra/bootstrap/fundacao.sh</code>). Se ficassem no Terraform principal, o <code>destroy</code> apagaria a identidade que o CI usa para recriar a infra.</p>
+<table>
+<tr><th>Identidade</th><th>Environment</th><th>Permissões</th></tr>
+<tr><td>deploy</td><td><code>production</code> (só a <code>main</code>)</td><td><code>AcrPush</code>/<code>Reader</code> no ACR e <code>Website Contributor</code> no Web App</td></tr>
+<tr><td>plan</td><td><code>infra-plan</code></td><td><code>Reader</code> na assinatura, leitura do tfstate e <code>Key Vault Secrets User</code></td></tr>
+<tr><td>apply</td><td><code>infra</code> (só a <code>main</code> + aprovação)</td><td><code>Contributor</code> + administração de RBAC limitada por <strong>condição ABAC</strong> aos 6 papéis que o Terraform atribui; não consegue conceder Owner nem Contributor</td></tr>
+</table>
+<p>As credenciais federadas OIDC usam os IDs imutáveis do repositório (<code>repo:CaminhoLivreGS@355958631/caminho-livre@1456200921:environment:...</code>), então um repositório recriado com o mesmo nome não herda o acesso. Locks <code>CanNotDelete</code> (resource group) e <code>ReadOnly</code> (identidades) impedem que a identidade de apply apague o tfstate ou adicione credenciais federadas para outro repositório. Contributor não remove locks; um teste até com Owner retornou <code>ScopeLocked</code>.</p>
+</section>
+
+<!-- ============================== 4. PILAR 2 ============================== -->
+<section class="secao">
+<h1>4. Pilar 2: pipeline DevSecOps</h1>
+<p>Dois workflows no GitHub Actions: <code>main.yml</code> (CI/CD DevSecOps), em todo push, PR para a <code>main</code> e manualmente; e <code>infra.yml</code> (Infra Terraform), com plan automático e apply/destroy manuais.</p>
+<table>
+<tr><th>Job</th><th>O que faz</th><th>Bloqueia quando</th></tr>
+<tr><td>Testes e build</td><td>23 testes unitários do núcleo de visão + build de produção</td><td>Algum teste falha</td></tr>
+<tr><td>Terraform</td><td><code>fmt -check</code> e <code>validate</code></td><td>Formatação ou sintaxe inválida</td></tr>
+<tr><td>Observabilidade</td><td><code>promtool check</code> e testes unitários das regras de alerta</td><td>Config ou regra inválida</td></tr>
+<tr><td><strong>Gitleaks</strong></td><td>Segredos em todo o histórico git</td><td>Qualquer segredo encontrado</td></tr>
+<tr><td><strong>Semgrep</strong></td><td>SAST: JavaScript, React, segredos, Dockerfile, nginx e Terraform</td><td>Risco ALTO ou CRÍTICO (matriz OWASP: probabilidade × impacto)</td></tr>
+<tr><td><strong>Trivy</strong></td><td>CVEs da imagem, segredos na imagem, misconfigurações de Dockerfile e Terraform, usuário non-root</td><td>CVE HIGH/CRITICAL com correção, ou misconfiguração HIGH/CRITICAL</td></tr>
+<tr><td>Gate de segurança</td><td>Consolida os resultados</td><td>Qualquer job anterior falhou</td></tr>
+<tr><td>Deploy (Azure)</td><td>Localiza ACR e Web App pela tag, envia a imagem aprovada, atualiza o Web App e faz smoke test</td><td>Só na <code>main</code>, com o gate aprovado</td></tr>
+<tr><td>Terraform plan</td><td>Plano com a identidade de leitura (<code>-lock=false</code>)</td><td>Erro no plano</td></tr>
+<tr><td>Terraform apply/destroy</td><td>Plano + aplicação; o apply dispara o deploy</td><td>Exige aprovação no environment <code>infra</code></td></tr>
+</table>
+<h2>Controles</h2>
+<ul>
+  <li><strong>GitHub Secrets:</strong> <code>AZURE_TENANT_ID</code>, <code>AZURE_SUBSCRIPTION_ID</code> e <code>ALERT_EMAIL</code> no repositório; <code>AZURE_CLIENT_ID</code> em cada environment (uma identidade por função). São identificadores: o login é OIDC, sem senha de longa duração.</li>
+  <li>Os valores dos secrets são mascarados nos logs públicos, e o arquivo de plan não é publicado como artefato. Durante a validação, um nome de recurso derivado do e-mail escapou da máscara; o código foi corrigido, o log foi apagado e os logs seguintes foram verificados sem nenhum fragmento do e-mail, da assinatura ou do tenant.</li>
+  <li>Actions de terceiros fixadas por SHA de commit; <code>permissions</code> mínimas por job.</li>
+  <li><code>main</code> protegida: exige PR, o check "Gate de segurança" e conversas resolvidas; force push e exclusão bloqueados, também para admins.</li>
+  <li>Relatórios SARIF no GitHub Code Scanning e como artefatos por 30 dias.</li>
+</ul>
+<h2>Bloqueio automático (simulação de falha)</h2>
+<p>O PR #3 introduziu de propósito: uma connection string falsa do Azure Storage (Gitleaks), XSS e segredo JWT fixo (Semgrep, 2 achados ALTO) e a imagem base antiga sem <code>apk upgrade</code> (Trivy). Os três scanners reprovaram, o gate mostrou "DEPLOY BLOQUEADO", o deploy não rodou e a proteção da <code>main</code> impediu o merge. O PR foi fechado sem merge. Evidências na seção 11.</p>
+</section>
+
+<!-- ============================== 5. PILAR 3 ============================== -->
+<section class="secao">
+<h1>5. Pilar 3: observabilidade</h1>
+<p>As 4 Métricas de Ouro (Google SRE) são monitoradas em duas camadas.</p>
+<table>
+<tr><th>Sinal</th><th>Azure Monitor (métrica do Web App)</th><th>Prometheus local</th></tr>
+<tr><td><strong>Latência</strong></td><td><code>HttpResponseTime</code> e p50/p95/p99 dos logs HTTP</td><td><code>probe_duration_seconds</code> (com fases DNS/TCP/TLS/servidor)</td></tr>
+<tr><td><strong>Tráfego</strong></td><td><code>Requests</code></td><td><code>nginx_http_requests_total</code></td></tr>
+<tr><td><strong>Erros</strong></td><td><code>Http5xx</code>, <code>Http4xx</code>, <code>HealthCheckStatus</code></td><td><code>probe_success</code>, <code>probe_http_status_code</code></td></tr>
+<tr><td><strong>Saturação</strong></td><td><code>CpuTime</code> (indicada para o F1) e <code>MemoryWorkingSet</code></td><td><code>nginx_connections_active</code></td></tr>
+</table>
+<h2>Alertas do Azure Monitor (e-mail)</h2>
+<table>
+<tr><th>Alerta</th><th>Condição</th><th>Severidade</th></tr>
+<tr><td>Erros 5xx</td><td>Mais de 5 respostas 5xx em 5 minutos</td><td>1</td></tr>
+<tr><td>Latência</td><td>Tempo médio de resposta acima de 2 s em 5 minutos</td><td>2</td></tr>
+<tr><td>Saturação de CPU</td><td>Mais de 60 s de CPU em 15 minutos</td><td>2</td></tr>
+<tr><td>Disponibilidade</td><td>Health check abaixo de 100% em 5 minutos</td><td>1</td></tr>
+</table>
+<p>Um Workbook "Caminho Livre - Métricas de Ouro" reúne os painéis no portal. Localmente, o Blackbox Exporter sonda a URL do Azure e o container; o Grafana já vem configurado com o dashboard, e 7 regras de alerta (indisponibilidade, 5xx, latência, saturação, pico de tráfego, certificado TLS expirando e coletor fora do ar) têm testes unitários no CI.</p>
+<p>Como a visão computacional roda no celular do cidadão, a CPU do container serve só arquivos estáticos. Por isso, os alertas principais são de erros e latência, e o de CPU protege a cota de 60 minutos de CPU por dia do plano F1.</p>
+<div class="ok">Evidência: o alerta de disponibilidade (Sev1) disparou no Azure enquanto o app respondia 503, antes do primeiro deploy, e se resolveu sozinho depois. Localmente, uma queda simulada disparou <code>AplicacaoIndisponivel</code> em 2 minutos.</div>
+</section>
+
+<!-- ============================== 6. KEY VAULT ============================== -->
+<section class="secao">
+<h1>6. Cofre de segredos (Azure Key Vault)</h1>
+<p><strong>Estratégia principal: não ter segredos de longa duração.</strong> O deploy usa OIDC (sem client secret), o Web App puxa imagens do ACR com identidade gerenciada (o ACR não tem usuário admin) e a aplicação é estática. Ainda assim, um Key Vault foi criado para guardar a configuração sensível que existe hoje e servir ao backend futuro.</p>
+<ul>
+  <li><strong>Autorização só por RBAC</strong>, sem access policies. Papéis com escopo no cofre: <code>Key Vault Secrets User</code> para o Web App e para o plan, <code>Key Vault Secrets Officer</code> só para a identidade de apply.</li>
+  <li><strong>Key Vault Reference:</strong> a app setting <code>APPLICATIONINSIGHTS_CONNECTION_STRING</code> guarda só o endereço do segredo (<code>@Microsoft.KeyVault(SecretUri=...)</code>); o App Service resolve o valor com a identidade gerenciada. Status verificado: <strong>Resolved</strong>.</li>
+  <li><strong>Segredo write-only</strong> (<code>value_wo</code>): o recurso do segredo não guarda o valor no tfstate. A mesma connection string ainda aparece no estado como atributo do próprio Application Insights, por isso o tfstate é protegido (só Entra ID, sem chaves, acesso por RBAC).</li>
+  <li>Soft delete de 7 dias; segredo com tipo de conteúdo e data de expiração.</li>
+  <li><strong>Riscos aceitos</strong> (seção 10): firewall do cofre aberto à rede pública e purge protection desligada.</li>
+</ul>
+</section>
+
+<!-- ============================== 7. CUSTOS ============================== -->
+<section class="secao">
+<h1>7. Estimativa de custos (Azure)</h1>
+<p>Preços de tabela em USD, região <code>eastus</code>, consultados na API oficial de preços do Azure (<code>prices.azure.com/api/retail/prices</code>) em 13/11/2026. A assinatura Azure for Students só permite as regiões <code>eastus</code>, <code>southcentralus</code>, <code>canadacentral</code>, <code>mexicocentral</code> e <code>southafricanorth</code>.</p>
+<table>
+<tr><th>Recurso</th><th>SKU</th><th>Preço unitário</th><th>Custo/mês (MVP)</th></tr>
+<tr><td>App Service Plan Linux</td><td>F1 (Free)</td><td>US$ 0</td><td><strong>US$ 0,00</strong></td></tr>
+<tr><td>Container Registry</td><td>Basic (10 GB inclusos)</td><td>US$ 0,1666/dia</td><td><strong>US$ 5,00</strong></td></tr>
+<tr><td>Key Vault</td><td>Standard</td><td>Sem mensalidade; US$ 0,03 a cada 10 mil operações</td><td><strong>≈ US$ 0,00</strong></td></tr>
+<tr><td>Log Analytics</td><td>Pay-as-you-go</td><td>5 GB/mês grátis; depois US$ 2,30/GB</td><td><strong>US$ 0,00</strong> (teto ≈ 3 GB/mês)</td></tr>
+<tr><td>Application Insights + Workbook</td><td>Baseado em workspace</td><td>Incluso no Log Analytics</td><td><strong>US$ 0,00</strong></td></tr>
+<tr><td>Alertas de métrica (4)</td><td></td><td>10 primeiros grátis; depois US$ 0,10/mês</td><td><strong>US$ 0,00</strong></td></tr>
+<tr><td>Action group (e-mail)</td><td></td><td>1.000 e-mails/mês grátis</td><td><strong>US$ 0,00</strong></td></tr>
+<tr><td>Storage do tfstate</td><td>Standard LRS</td><td>Poucos KB</td><td><strong>&lt; US$ 0,01</strong></td></tr>
+<tr><td>Identidades, RBAC, locks, budget</td><td></td><td>Sem custo</td><td><strong>US$ 0,00</strong></td></tr>
+<tr><th colspan="3">Total</th><th>≈ US$ 5,00/mês (≈ US$ 0,17/dia)</th></tr>
+</table>
+<p><strong>Cenário de produção (referência):</strong> App Service B1 (US$ 0,017/h ≈ US$ 12,41/mês), que adiciona Always On, sem cold start e com SLA, totalizando ≈ US$ 17,40/mês. Com B1, também passaria a ser viável a VNet Integration para fechar o firewall do Key Vault.</p>
+<h2>Estratégia de economia</h2>
+<ul>
+  <li>Plano F1 gratuito no MVP e teto diário de ingestão de logs.</li>
+  <li>Budget com alertas por e-mail em 50%, 80% e 100%.</li>
+  <li>Infraestrutura desligada fora das janelas de avaliação (workflow <em>Infra</em>, ação <code>destroy</code>) e religada sob demanda (<code>apply</code>). A fundação permanece por menos de US$ 0,01/mês.</li>
+  <li>Gasto real da sessão de validação (cerca de 2 h no ar, com deploy, simulação de falha e alerta): em torno de US$ 0,01.</li>
+</ul>
+</section>
+
+<!-- ============================== 8. RESPONSABILIDADE ============================== -->
+<section class="secao">
+<h1>8. Modelo de responsabilidade compartilhada</h1>
+<p>O Azure App Service é um serviço <strong>PaaS</strong>: a Microsoft opera a plataforma, e a equipe responde pelo que roda nela e por como ela é configurada.</p>
+<table>
+<tr><th style="width:24%">Camada</th><th style="width:22%">Microsoft</th><th style="width:12%">Equipe</th><th>Como a equipe cumpre</th></tr>
+<tr><td>Datacenter, hardware e rede física</td><td>✔</td><td></td><td></td></tr>
+<tr><td>SO do host e virtualização</td><td>✔</td><td></td><td></td></tr>
+<tr><td>Runtime do App Service, balanceador, patches da plataforma</td><td>✔</td><td></td><td></td></tr>
+<tr><td>Certificado TLS de <code>*.azurewebsites.net</code></td><td>✔</td><td></td><td></td></tr>
+<tr><td><strong>Imagem do container</strong></td><td></td><td>✔</td><td>Trivy bloqueia CVEs HIGH/CRITICAL; <code>apk upgrade</code>; base atualizada</td></tr>
+<tr><td><strong>Código da aplicação</strong></td><td></td><td>✔</td><td>Semgrep, testes unitários, revisão por PR</td></tr>
+<tr><td><strong>Segredos e credenciais</strong></td><td>Fornece o Key Vault</td><td>✔</td><td>Sem segredos de longa duração (OIDC, identidade gerenciada); Key Vault por RBAC; Gitleaks; GitHub Secrets</td></tr>
+<tr><td><strong>Identidade e acesso</strong></td><td>Fornece Entra ID e RBAC</td><td>✔ configura</td><td>Menor privilégio por função; ABAC no apply; locks contra escalada</td></tr>
+<tr><td><strong>Rede e exposição</strong></td><td>Fornece os controles</td><td>✔ configura</td><td>HTTPS, TLS 1.2, SCM/SSH negado, sem <code>0.0.0.0/0</code></td></tr>
+<tr><td><strong>Dados e privacidade</strong></td><td>Protege a infraestrutura</td><td>✔</td><td>Anonimização no aparelho, IP mascarado, retenção limitada</td></tr>
+<tr><td><strong>Monitoramento e resposta</strong></td><td>Fornece o Azure Monitor</td><td>✔ configura</td><td>Métricas de Ouro, 4 alertas, budget</td></tr>
+<tr><td><strong>Estado da infraestrutura</strong></td><td>Durabilidade do Blob Storage</td><td>✔</td><td>tfstate remoto, sem chaves, versionado, fora do git</td></tr>
+</table>
+<p>Em IaaS (máquinas virtuais), o patch do sistema operacional, o firewall do host e o SSH passariam à equipe; por isso o PaaS foi escolhido para o MVP.</p>
+</section>
+
+<!-- ============================== 9. LGPD ============================== -->
+<section class="secao">
+<h1>9. Estratégia de LGPD</h1>
+<p><strong>Princípios aplicados (art. 6º):</strong> finalidade, necessidade (minimização), segurança e prevenção.</p>
+<ol>
+  <li><strong>Anonimização antes de sair do aparelho.</strong> A foto é processada no navegador, num Web Worker com OpenCV.js. Rostos (frontal e perfil) e placas de veículos são detectados e borrados, e o cidadão pode borrar áreas extras. Só a imagem anonimizada pode ser enviada.</li>
+  <li><strong>Sem metadados.</strong> O envio usa o canvas re-renderizado: os dados EXIF (GPS, modelo da câmera, data) são descartados.</li>
+  <li><strong>Nenhuma foto no servidor, no MVP.</strong> O backend de denúncias ainda não existe e o app roda em modo demonstração: nada sai do aparelho. O container só entrega arquivos estáticos e não recebe uploads.</li>
+  <li><strong>Trânsito protegido.</strong> HTTPS obrigatório com TLS 1.2+ e HSTS. A CSP <code>connect-src 'self'</code> impede o envio de dados a outros domínios.</li>
+  <li><strong>Telemetria mínima.</strong> Sem cookies de rastreamento nem SDK de analytics no front-end; Application Insights com IP mascarado. Os logs HTTP do App Service (URL, status, IP e user agent) servem à segurança e operação (legítimo interesse, art. 7º, IX), com retenção de 30 dias.</li>
+  <li><strong>Dataset sem pessoas.</strong> O repositório é público, então todas as fotos com pessoas identificáveis foram retiradas do dataset de testes, mesmo tendo licença livre.</li>
+  <li><strong>Dados pessoais da equipe.</strong> O e-mail de alertas fica num GitHub Secret, mascarado nos logs; prints com e-mail pessoal não foram publicados.</li>
+  <li><strong>Região de dados.</strong> A política da assinatura acadêmica não permite <code>brazilsouth</code>; a infraestrutura fica em <code>eastus</code>. Como as fotos não vão para a nuvem, só logs operacionais ficam fora do Brasil, sob as cláusulas contratuais de proteção de dados da Microsoft (art. 33). Em produção, recomenda-se <code>brazilsouth</code>.</li>
+</ol>
+<p><strong>Próximos passos para o backend:</strong> autenticação do cidadão, limite de envios, deduplicação pelo hash perceptual, fila de moderação para casos inconclusivos, criptografia em repouso das imagens anonimizadas (chaves no Key Vault), política de retenção e canal para os direitos do titular (art. 18).</p>
+</section>
+
+<!-- ============================== 10. RISCOS ============================== -->
+<section class="secao">
+<h1>10. Riscos aceitos</h1>
+<p>Achados dos scanners que não se aplicam ao MVP ou que dependem de recursos pagos. Cada um está registrado no código (<code>.trivyignore</code> ou comentário <code>nosemgrep</code>), com justificativa e revisão prevista.</p>
+<table>
+<tr><th style="width:16%">Achado</th><th>Justificativa</th><th style="width:28%">Controle compensatório / revisão</th></tr>
+<tr><td>AZU-0003: App Service sem autenticação</td><td>App cidadão público; o conteúdo estático não deve exigir login</td><td>Autenticação exigida no backend de denúncias</td></tr>
+<tr><td>AZU-0001: sem certificado de cliente</td><td>mTLS é para máquina-a-máquina; cidadãos usam navegador comum</td><td>HTTPS obrigatório</td></tr>
+<tr><td>AZU-0013 (CRITICAL): firewall do Key Vault aberto</td><td>O Web App só alcança um cofre com firewall por VNet Integration, indisponível no F1; os runners do GitHub não têm IP fixo</td><td>RBAC, papéis com escopo no cofre, segredo write-only, TLS. Revisar ao migrar para B1</td></tr>
+<tr><td>AZU-0016 / Semgrep <code>keyvault-purge-enabled</code></td><td>A infra é destruída e recriada entre avaliações; com purge protection, o nome ficaria bloqueado por até 90 dias</td><td>Soft delete de 7 dias. Em produção, ligar</td></tr>
+</table>
+</section>
+
+<!-- ============================== 11. EVIDÊNCIAS ============================== -->
+<section class="secao">
+<h1>11. Evidências</h1>
+<h2>11.1 Bloqueio automático (PR #3, simulação de falha)</h2>
+<figure><img src="../evidencias/01-pr3-gitleaks-segredo.png"><figcaption>Figura 2. Gitleaks detecta a connection string (falsa) do Azure Storage no código.</figcaption></figure>
+<figure><img src="../evidencias/02-pr3-semgrep-xss.png"><figcaption>Figura 3. Semgrep aponta XSS: <code>raw-html-format</code> (ALTO, bloqueia) e <code>direct-response-write</code> (MÉDIO, só registrado).</figcaption></figure>
+<figure><img src="../evidencias/03-pr3-semgrep-jwt-sem-deploy.png"><figcaption>Figura 4. Semgrep aponta segredo de JWT fixo (ALTO); o PR termina com "This branch has not been deployed".</figcaption></figure>
+<div class="duas">
+<figure><img src="../evidencias/04-gate-deploy-bloqueado.png"><figcaption>Figura 5. Gate de segurança: DEPLOY BLOQUEADO.</figcaption></figure>
+<figure><img src="../evidencias/05-trivy-68-cves.png"><figcaption>Figura 6. Trivy: 68 vulnerabilidades (65 HIGH, 3 CRITICAL) na imagem com Alpine 3.21.3.</figcaption></figure>
+</div>
+
+<h2>11.2 Pipeline aprovado e deploy no Azure</h2>
+<figure><img src="../evidencias/06-run-verde-com-deploy.png"><figcaption>Figura 7. Run aprovado: 6 verificações em paralelo, gate aprovado e deploy no Azure (OIDC, push no ACR, smoke test).</figcaption></figure>
+<figure><img src="../evidencias/07-app-no-ar-azure.png"><figcaption>Figura 8. Aplicação no ar no Azure App Service.</figcaption></figure>
+<figure><img src="../evidencias/15-infra-apply-aprovado.png"><figcaption>Figura 9. Workflow Infra (Terraform): apply aprovado manualmente no environment <code>infra</code>, infraestrutura criada e deploy disparado.</figcaption></figure>
+
+<h2>11.3 Observabilidade e alertas</h2>
+<figure><img src="../evidencias/08-azure-monitor-alertas.png"><figcaption>Figura 10. Azure Monitor: alerta de disponibilidade (Sev1) disparado e resolvido.</figcaption></figure>
+<figure><img src="../evidencias/09-azure-alerta-disponibilidade.png"><figcaption>Figura 11. Detalhe do alerta: HealthCheckStatus caiu de 100 para 0 e voltou ao normal.</figcaption></figure>
+<figure><img src="../evidencias/grafana-metricas-de-ouro-queda-simulada.png"><figcaption>Figura 12. Grafana local: Métricas de Ouro durante a queda simulada (alerta AplicacaoIndisponivel em 2 minutos).</figcaption></figure>
+
+<h2>11.4 Notificações do GitHub</h2>
+<figure><img src="../evidencias/10-email-code-scanning-pr3.png"><figcaption>Figura 13. E-mail do GitHub Code Scanning com os achados do Semgrep no PR #3.</figcaption></figure>
+<div class="nota">No primeiro commit da simulação (<code>34ae35f</code>), o Trivy falhou por um erro de sintaxe no Dockerfile, e não por CVEs; a execução válida é a do commit <code>3719912</code>, mostrada na Figura 6. As notificações das duas tentativas estão em <code>docs/evidencias/</code>.</div>
+<div class="duas">
+<figure><img src="../evidencias/13-email-run-falhou-push-3719912.png"><figcaption>Figura 14. Notificação do run reprovado (push, 3719912).</figcaption></figure>
+<figure><img src="../evidencias/14-email-run-falhou-pr-3719912.png"><figcaption>Figura 15. Notificação do run reprovado (PR, 3719912).</figcaption></figure>
+</div>
+</section>
+
+<!-- ============================== 12. REPRODUZIR ============================== -->
+<section class="secao">
+<h1>12. Como reproduzir</h1>
+<h2>Uma vez (Owner da assinatura)</h2>
+<pre>az login
+sh infra/bootstrap/fundacao.sh                                       # tfstate + identidades + locks
+EMAIL_ALERTA=voce@exemplo.com sh infra/scripts/configurar-github.sh  # environments, secrets, variables</pre>
+<h2>Ligar e desligar a infraestrutura</h2>
+<p>GitHub → Actions → <em>Infra (Terraform)</em> → Run workflow (branch <code>main</code>) → <code>acao = apply</code> ou <code>destroy</code> → aprovação no environment <code>infra</code>. O apply cria os 24 recursos e dispara o deploy da aplicação (cerca de 15 minutos).</p>
+<h2>Localmente</h2>
+<pre>docker compose up --build -d                              # app em http://127.0.0.1:8080
+openssl rand -base64 24 > observability/grafana/admin-password
+docker compose --profile observability up --build -d      # + Prometheus/Grafana
+npm install &amp;&amp; npm run deps &amp;&amp; npm test                   # testes unitários</pre>
+<h2>Links</h2>
+<ul>
+  <li>Repositório: https://github.com/CaminhoLivreGS/caminho-livre</li>
+  <li>Aplicação: https://app-caminholivre-prod-00e44e.azurewebsites.net</li>
+  <li>Simulação de falha: https://github.com/CaminhoLivreGS/caminho-livre/pull/3</li>
+  <li>Run reprovado: https://github.com/CaminhoLivreGS/caminho-livre/actions/runs/43903627055</li>
+  <li>Run com deploy: https://github.com/CaminhoLivreGS/caminho-livre/actions/runs/43898004965</li>
+  <li>Apply aprovado: https://github.com/CaminhoLivreGS/caminho-livre/actions/runs/43956593526</li>
+</ul>
+</section>
+</body>
+</html>
