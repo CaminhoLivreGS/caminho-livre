@@ -198,7 +198,7 @@ Preços de tabela em USD, região `eastus`, consultados em [prices.azure.com](ht
 - F1 gratuito no MVP.
 - Teto diário de ingestão de logs.
 - Budget com alertas por e-mail.
-- `terraform destroy` fora das janelas de avaliação; o ACR é o único custo fixo.
+- Infra desligada fora das janelas de avaliação com [`infra/scripts/destruir.sh`](infra/scripts/destruir.sh); o ACR é o único custo fixo. Na sessão de validação (cerca de 2 h no ar, com deploy, simulação de falha e alerta), o gasto ficou em torno de US$ 0,01.
 - [`infra/scripts/custos.sh`](infra/scripts/custos.sh) mostra o gasto real do mês por recurso (Cost Management).
 
 ## Modelo de responsabilidade compartilhada
@@ -238,15 +238,19 @@ Se o produto migrasse para IaaS (máquinas virtuais), o patch do sistema operaci
 
 ## Evidências para a avaliação
 
-| Requisito | Onde verificar |
+| Requisito | Evidência |
 |---|---|
-| Pipeline verde com os 3 scanners em paralelo | [Aba Actions](https://github.com/CaminhoLivreGS/caminho-livre/actions) |
+| Pipeline aprovado, com os 3 scanners em paralelo e **deploy automático no Azure** | [Run com deploy](https://github.com/CaminhoLivreGS/caminho-livre/actions/runs/43898004965): 8 jobs verdes, login OIDC, push no ACR, deploy no Web App e smoke test em `/healthz` |
+| **Bloqueio automático** por vulnerabilidade | [PR #3, simulação de falha](https://github.com/CaminhoLivreGS/caminho-livre/pull/3), fechado sem merge. No [run reprovado](https://github.com/CaminhoLivreGS/caminho-livre/actions/runs/43903627055): Gitleaks (segredo falso), Semgrep (2 achados ALTO: XSS e JWT fixo) e Trivy (**68 CVEs: 65 HIGH, 3 CRITICAL**) reprovam, o gate mostra "DEPLOY BLOQUEADO", o deploy não roda e a proteção da `main` impede o merge |
 | Relatórios dos scanners | Aba Security → Code scanning e artefatos de cada execução |
-| Bloqueio automático por vulnerabilidade | PR da [simulação de falha](#simulação-de-falha-evidência-do-bloqueio) |
-| Container non-root | Passo "Verificar usuário non-root" no job do Trivy |
-| tfstate remoto e `.tfvars` fora do git | [`.gitignore`](.gitignore) e [`infra/terraform/versions.tf`](infra/terraform/versions.tf) (backend `azurerm`) |
-| SSH/administração fechada | `scm_ip_restriction_default_action = "Deny"` e validação de `admin_cidrs` em [`infra/terraform/`](infra/terraform/) |
-| Métricas de Ouro e alerta disparado | [`docs/evidencias/`](docs/evidencias/) |
+| Container non-root | Passo "Verificar usuário non-root" no job do Trivy (UID 101) |
+| tfstate remoto e `.tfvars` fora do git | Backend `azurerm` em [`infra/terraform/versions.tf`](infra/terraform/versions.tf); `*.tfstate`, `*.tfvars` e `backend.hcl` no [`.gitignore`](.gitignore) |
+| SSH/administração fechada | Verificado com a infra no ar: o SCM/Kudu respondeu **HTTP 403** a acessos pela internet (`scm_ip_restriction_default_action = "Deny"`; `admin_cidrs` rejeita `0.0.0.0/0`) |
+| Métricas de Ouro e alerta disparado | No Azure, o alerta `disponibilidade` (Sev1) disparou e enviou e-mail enquanto o app respondia 503, antes do primeiro deploy. No Prometheus local, a queda simulada aparece em [`docs/evidencias/`](docs/evidencias/) |
+
+Os prints do portal do Azure (Workbook e alertas), do e-mail de alerta e do app no ar ficam em [`docs/evidencias/`](docs/evidencias/).
+
+**Desligar a infraestrutura** (zera o gasto e mantém só o tfstate): `sh infra/scripts/destruir.sh`. **Religar:** `terraform apply` + `sh infra/scripts/configurar-github.sh` + qualquer push na `main`.
 
 ## Estrutura do repositório
 
