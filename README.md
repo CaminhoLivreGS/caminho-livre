@@ -129,7 +129,7 @@ flowchart LR
 | Identidade | Environment do GitHub | Permissões |
 |---|---|---|
 | deploy | `production` (só a `main`) | `AcrPush`/`Reader` no ACR e `Website Contributor` no Web App (concedidas pelo Terraform) |
-| plan | `infra-plan` | `Reader` na assinatura, leitura do tfstate e `Key Vault Secrets User` (para o refresh) |
+| plan | `infra-plan` | `Reader` na assinatura + papel customizado só de leitura (`sites/config/list` e `workspaces/sharedKeys`, que o Reader não inclui), leitura do tfstate e `Key Vault Secrets User`, todos usados no refresh |
 | apply | `infra` (só a `main` + **aprovação de um revisor**) | `Contributor` + administração de RBAC **limitada por condição ABAC** aos 6 papéis que o Terraform atribui; não consegue conceder Owner nem Contributor |
 
 As credenciais federadas usam os IDs imutáveis do repositório (`repo:CaminhoLivreGS@355958631/caminho-livre@1456200921:environment:...`), então um repositório recriado com o mesmo nome não herda o acesso. Locks `CanNotDelete` (resource group) e `ReadOnly` (identidades) impedem que a identidade de apply apague o tfstate ou adicione credenciais federadas para outro repositório. Contributor não remove locks; o teste com Owner retornou `ScopeLocked`.

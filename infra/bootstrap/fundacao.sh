@@ -65,10 +65,24 @@ done
 az group create --name "$RG" --location "$REGIAO" \
   --tags projeto=caminho-livre finalidade=fundacao --output none
 
-# Locks são removidos durante o bootstrap e recriados no fim (só Owner pode).
+# Locks são removidos durante o bootstrap e SEMPRE recriados ao sair, mesmo se
+# o script falhar no meio (trap). Só Owner remove/cria locks.
+criar_locks() {
+  az lock create --name fundacao-nao-apagar --lock-type CanNotDelete --resource-group "$RG" \
+    --notes "Fundação do Caminho Livre: tfstate e identidades do GitHub." --output none || true
+  for nome in id-caminholivre-github-deploy id-caminholivre-github-plan id-caminholivre-github-apply; do
+    if az identity show --name "$nome" --resource-group "$RG" --output none 2>/dev/null; then
+      az lock create --name fundacao-somente-leitura --lock-type ReadOnly --resource-group "$RG" \
+        --resource-name "$nome" --resource-type Microsoft.ManagedIdentity/userAssignedIdentities \
+        --notes "Impede adicionar credenciais federadas à identidade." --output none || true
+    fi
+  done
+  echo "Locks: $(az lock list --resource-group "$RG" --query 'length(@)' -o tsv) ativos."
+}
 for lock in $(az lock list --resource-group "$RG" --query "[?starts_with(name, 'fundacao-')].id" -o tsv); do
   az lock delete --ids "$lock"
 done
+trap criar_locks EXIT
 
 # --- 1. Storage do tfstate ----------------------------------------------------
 az storage account create \
@@ -138,8 +152,40 @@ sleep 20   # o service principal da identidade leva alguns segundos para existir
 
 # --- 3. Papéis ------------------------------------------------------------------
 # plan: só leitura (assinatura e tfstate). Roda com -lock=false.
+# Reader não inclui as ações "list" que o refresh do Terraform usa para ler a
+# configuração do Web App e as chaves do Log Analytics; um papel customizado
+# concede só essas leituras (sem nenhuma ação de escrita).
+PAPEL_PLAN="Caminho Livre Terraform Plan"
+DEF_PLAN=$(cat <<EOF
+{
+  "Name": "$PAPEL_PLAN",
+  "Description": "Leituras extras que o terraform plan precisa além de Reader (somente leitura).",
+  "Actions": [
+    "Microsoft.Web/sites/config/list/action",
+    "Microsoft.OperationalInsights/workspaces/sharedKeys/action"
+  ],
+  "NotActions": [],
+  "AssignableScopes": ["$ESCOPO_ASSINATURA"]
+}
+EOF
+)
+# A listagem de papéis customizados tem consistência eventual: tenta criar e,
+# se já existir, atualiza.
+if ! saida="$(az role definition create --role-definition "$DEF_PLAN" --output none 2>&1)"; then
+  case "$saida" in
+    *RoleDefinitionWithSameNameExists*) az role definition update --role-definition "$DEF_PLAN" --output none ;;
+    *) echo "$saida" >&2; exit 1 ;;
+  esac
+fi
+# A definição leva até alguns minutos para poder ser atribuída.
+tentativas=0
+until [ -n "$(az role definition list --name "$PAPEL_PLAN" --query '[0].name' -o tsv 2>/dev/null)" ]; do
+  tentativas=$((tentativas + 1)); [ "$tentativas" -ge 24 ] && { echo "ERRO: papel $PAPEL_PLAN não propagou" >&2; exit 1; }
+  sleep 10
+done
 echo "  plan:"
 atribuir "$PLAN" ServicePrincipal "Reader" "$ESCOPO_ASSINATURA"
+atribuir "$PLAN" ServicePrincipal "$PAPEL_PLAN" "$ESCOPO_ASSINATURA"
 atribuir "$PLAN" ServicePrincipal "Storage Blob Data Reader" "$CONTA_ID"
 
 # apply: Contributor + administração de RBAC LIMITADA por condição ABAC aos
@@ -155,14 +201,7 @@ atribuir "$APPLY" ServicePrincipal "Storage Blob Data Contributor" "$CONTA_ID"
 # deploy: nenhum papel aqui; AcrPush e Website Contributor vêm do Terraform,
 # com escopo no ACR e no Web App.
 
-# --- 4. Locks -------------------------------------------------------------------
-az lock create --name fundacao-nao-apagar --lock-type CanNotDelete --resource-group "$RG" \
-  --notes "Fundação do Caminho Livre: tfstate e identidades do GitHub." --output none
-for nome in id-caminholivre-github-deploy id-caminholivre-github-plan id-caminholivre-github-apply; do
-  az lock create --name fundacao-somente-leitura --lock-type ReadOnly --resource-group "$RG" \
-    --resource-name "$nome" --resource-type Microsoft.ManagedIdentity/userAssignedIdentities \
-    --notes "Impede adicionar credenciais federadas à identidade." --output none
-done
+# --- 4. Locks: recriados pelo trap criar_locks ao sair ------------------------
 
 cat > "$RAIZ/infra/terraform/backend.hcl" <<EOF
 resource_group_name  = "$RG"
