@@ -29,11 +29,11 @@ Trabalho da disciplina **Secure DevOps Tools & Cloud Computing**, FIAP.
 | | |
 |---|---|
 | **URL** | https://app-caminholivre-prod-00e44e.azurewebsites.net |
-| **Situação** | 🟢 **No ar para a avaliação** desde 16/11/2026 |
+| **Situação** | ⏸️ **Desligada** desde 16/11/2026 para poupar créditos. A URL não responde até a infraestrutura ser religada (passos abaixo). |
 | **Plano** | App Service F1 (gratuito). A primeira visita após um período sem acesso pode levar até ~1 minuto, enquanto o container inicia (*cold start*); as seguintes são imediatas. |
-| **Custo enquanto no ar** | ≈ US$ 0,17/dia (só o Container Registry tem custo fixo) |
+| **Custo** | Desligada: < US$ 0,01/mês (só a fundação: tfstate e identidades). No ar: ≈ US$ 0,17/dia (só o Container Registry tem custo fixo) |
 
-Fora do período de avaliação, a infraestrutura é desligada para poupar créditos e a URL deixa de responder. Para religar ou desligar, sem acesso ao portal do Azure:
+A aplicação funcionou no Azure durante a validação: ver as [evidências](docs/evidencias/README.md) (deploy, app no ar e alertas). Para religar ou desligar, sem acesso ao portal do Azure:
 
 1. GitHub → **Actions** → **Infra (Terraform)** → **Run workflow** (branch `main`).
 2. Escolha `acao = apply` (liga) ou `acao = destroy` (desliga).
