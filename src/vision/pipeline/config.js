@@ -27,7 +27,7 @@ export const COR = Object.freeze({
 
 export const CONFIG = {
   // Placas por agrupamento de caracteres (Mercosul e modelo antigo),
-  // complementa o Haar de placa russa. Medidas na imagem de detecção (1280 px).
+  // complementa o Haar de placa russa. Medidas na imagem de detecção (MAX_DIMENSAO_DETECCAO, 800 px).
   PLACA: {
     ATIVO: true,
     BLOCO_ADAPTATIVO: 31, // vizinhança do limiar adaptativo (ímpar)
@@ -93,7 +93,7 @@ export const CONFIG = {
     CASCADE_BASE_URL: '/cascades/',
     // Rostos distantes são pequenos: a detecção usa uma resolução maior que a
     // da análise e as regiões são reprojetadas na imagem de saída.
-    MAX_DIMENSAO_DETECCAO: 1280,
+    MAX_DIMENSAO_DETECCAO: 800, // 1280 gastava 512 MB e ~2,3x mais tempo; 800 cobriu 18 de 21 placas (1280: 17)
     CASCADES: [
       { tipo: 'ROSTO', arquivo: 'haarcascade_frontalface_default.xml', minNeighbors: 5 },
       { tipo: 'ROSTO', arquivo: 'haarcascade_frontalface_alt2.xml', minNeighbors: 4 },

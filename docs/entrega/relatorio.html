@@ -89,7 +89,7 @@
 <tr><td><strong>Fontes de dados</strong></td><td>Fotos enviadas pelo cidadão (processadas só no aparelho). Calibração e testes com 101 fotos de licença livre do Wikimedia Commons, sem pessoas identificáveis. Estrutura pronta para um dataset brasileiro de treino/teste.</td></tr>
 <tr><td><strong>Modelos de IA</strong></td><td>Visão computacional clássica: Canny, morfologia, limiarização HSV, componentes conexos, Hough e hash perceptual (dHash). Única IA treinada: Haar Cascades do OpenCV 4.9.0 (rosto frontal, perfil e placa), usada só para anonimização. Placas brasileiras detectadas por agrupamento de caracteres.</td></tr>
 <tr><td><strong>URL</strong></td><td>https://app-caminholivre-prod-00e44e.azurewebsites.net (no ar durante a avaliação; fora dela, desligada para poupar créditos e religada pelo GitHub Actions em cerca de 15 minutos).</td></tr>
-<tr><td><strong>Indicadores de impacto</strong></td><td><strong>Medidos hoje:</strong> acurácia de 65,7% (Acessibilidade), 89,7% (Obstáculo) e 87,0% (Alagamento); 17 de 21 placas brasileiras borradas; 0 fotos reais rejeitadas indevidamente.<br><strong>Metas para o piloto:</strong> denúncias validadas por mês; % confirmadas automaticamente; tempo médio até o encaminhamento à prefeitura; 100% das fotos enviadas anonimizadas; disponibilidade ≥ 99% e latência p95 &lt; 2 s.</td></tr>
+<tr><td><strong>Indicadores de impacto</strong></td><td><strong>Medidos hoje:</strong> acurácia de 65,7% (Acessibilidade), 89,7% (Obstáculo) e 87,0% (Alagamento); 18 de 21 placas brasileiras borradas; 0 fotos reais rejeitadas indevidamente.<br><strong>Metas para o piloto:</strong> denúncias validadas por mês; % confirmadas automaticamente; tempo médio até o encaminhamento à prefeitura; 100% das fotos enviadas anonimizadas; disponibilidade ≥ 99% e latência p95 &lt; 2 s.</td></tr>
 <tr><td><strong>ODS</strong></td><td><strong>ODS 10, Redução das desigualdades</strong> (meta 10.2: inclusão de pessoas com deficiência).<br><strong>ODS 11, Cidades e comunidades sustentáveis</strong> (meta 11.2: mobilidade acessível; meta 11.7: espaços públicos seguros, inclusivos e acessíveis).</td></tr>
 </table>
 </section>
@@ -280,7 +280,7 @@
 <h1>9. Estratégia de LGPD</h1>
 <p><strong>Princípios aplicados (art. 6º):</strong> finalidade, necessidade (minimização), segurança e prevenção.</p>
 <ol>
-  <li><strong>Anonimização antes de sair do aparelho.</strong> A foto é processada no navegador, num Web Worker com OpenCV.js. Rostos (frontal e perfil) e placas de veículos são detectados e borrados, e o cidadão pode borrar áreas extras. Só a imagem anonimizada pode ser enviada.</li>
+  <li><strong>Anonimização antes de sair do aparelho.</strong> A foto é processada no navegador, num Web Worker com OpenCV.js. Rostos (frontal e perfil) e placas de veículos são detectados e borrados, e o cidadão pode borrar áreas extras. Só a imagem anonimizada pode ser enviada. A miniatura exibida antes da anonimização aparece desfocada.</li>
   <li><strong>Sem metadados.</strong> O envio usa o canvas re-renderizado: os dados EXIF (GPS, modelo da câmera, data) são descartados.</li>
   <li><strong>Nenhuma foto no servidor, no MVP.</strong> O backend de denúncias ainda não existe e o app roda em modo demonstração: nada sai do aparelho. O container só entrega arquivos estáticos e não recebe uploads.</li>
   <li><strong>Trânsito protegido.</strong> HTTPS obrigatório com TLS 1.2+ e HSTS. A CSP <code>connect-src 'self'</code> impede o envio de dados a outros domínios.</li>

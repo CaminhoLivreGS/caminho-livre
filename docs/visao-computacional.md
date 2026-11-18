@@ -65,7 +65,7 @@ Em 63 fotos distintas do Wikimedia Commons, rotuladas por categoria em `dataset/
 
 O detector de rachaduras foi calibrado com poucos exemplos (4 fotos de rachadura no gabarito atual).
 
-**Placas (LGPD):** em 21 composições (7 placas brasileiras reais coladas em fotos de rua, 3 tamanhos e ângulos), o borrão cobre 17 placas (só com o Haar russo: 7). Em compensação, nas 63 fotos de rua, a área borrada sem necessidade é em média 0,47% da imagem, em geral texto de letreiros. Placas vermelhas antigas, de letras grossas, ainda falham.
+**Placas (LGPD):** em 21 composições (7 placas brasileiras reais coladas em fotos de rua, 3 tamanhos e ângulos), o borrão cobre 18 placas (só com o Haar russo: 7, medido com detecção em 1280 px). Em compensação, nas 63 fotos de rua, a área borrada sem necessidade é em média 0,59% da imagem, em geral texto de letreiros. A detecção da LGPD roda em até 800 px: em 1280 px ela usava 512 MB de memória e levava cerca de 2,3 vezes mais tempo, e cobria uma placa a menos (17). Placas vermelhas antigas, de letras grossas, ainda falham.
 
 **Dataset público sem pessoas (LGPD):** o repositório é público, então fotos com pessoas (rostos, retratos, selfies e pedestres, mesmo distantes) foram retiradas do dataset versionado, embora tenham licença livre no Commons. Por isso as avaliações `LGPD` (borrão de rostos em fotos reais) e `RETRATOS` não têm mais fotos aqui, e o filtro de foto fora de contexto é medido em só 6 fotos. A função de borrão (`anonimizar`) continua coberta pelos testes unitários com imagens sintéticas; já a detecção de rostos em fotos reais só pode ser calibrada com um conjunto local, fora do git.
 
