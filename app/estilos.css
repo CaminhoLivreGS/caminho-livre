@@ -313,6 +313,9 @@ h1 {
   margin: 0 0 1rem;
   border-radius: var(--raio);
   border: 2px solid var(--borda);
+  /* LGPD: a miniatura aparece antes da anonimização, então fica desfocada
+     (dá para reconhecer o enquadramento, não rostos nem placas). */
+  filter: blur(14px);
 }
 
 /* ---- Resultado ------------------------------------------------------------ */

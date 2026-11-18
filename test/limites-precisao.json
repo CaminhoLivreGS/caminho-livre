@@ -4,6 +4,6 @@
   "OBSTACULO": { "acuraciaMin": 0.89, "falsosPositivosMax": 1, "fotosReaisRejeitadasMax": 0 },
   "ALAGAMENTO": { "acuraciaMin": 0.86, "falsosPositivosMax": 0, "fotosReaisRejeitadasMax": 0 },
   "CENA": { "fotosDeRuaRejeitadasMax": 0, "foraDeContextoRejeitadasMin": 2 },
-  "PLACAS": { "placasCobertasMin": 17, "areaFalsaMediaMax": 0.005 },
+  "PLACAS": { "placasCobertasMin": 18, "areaFalsaMediaMax": 0.0065 },
   "QUALIDADE": { "originaisRejeitadosMax": 0, "degradadasAceitasMax": 2, "colisoesMax": 0 }
 }

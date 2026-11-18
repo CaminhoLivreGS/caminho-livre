@@ -10,7 +10,7 @@ import { CONFIG } from './config.js';
  * Converte <img>/<canvas> em ImageData, reduzindo fotos grandes já no
  * navegador (drawImage é acelerado por GPU). Uma foto de 12 MP vira ~2,5 MP:
  * menos memória no WASM e menos dados copiados para o worker. A análise
- * usa no máximo 1280 px (LGPD) e 1024 px (pipelines), então não há perda.
+ * usa no máximo 800 px (LGPD) e 1024 px (pipelines), então não há perda.
  */
 export function prepararEntrada(elemento, maxLado = CONFIG.GERAL.MAX_ENTRADA) {
   const largura = elemento.naturalWidth || elemento.videoWidth || elemento.width;
