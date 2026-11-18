@@ -5,7 +5,7 @@
 App colaborativo de acessibilidade urbana para pedestres com deficiência e mobilidade reduzida. O cidadão fotografa um problema na calçada, e um módulo de visão computacional no próprio celular confirma a evidência e borra rostos e placas antes de qualquer envio.
 
 Trabalho da disciplina **Secure DevOps Tools & Cloud Computing**, FIAP.
-**Integrantes:** Gilson Dias, Gabriel de Mendonça e Isabelle Toricelli.
+**Integrantes:** Gilson Dias Ramos Junior, Isabelle Toricelli da Silva e Jeferson Gabriel de Mendonça.
 
 📄 **Relatório completo da entrega (PDF):** [`docs/entrega/Caminho-Livre-Relatorio.pdf`](docs/entrega/Caminho-Livre-Relatorio.pdf), com diagrama, custos, LGPD, riscos aceitos e evidências.
 
