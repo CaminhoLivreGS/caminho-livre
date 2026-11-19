@@ -45,21 +45,27 @@ LABEL org.opencontainers.image.title="caminho-livre" \
 # Atualiza pacotes do SO (reduz CVEs apontadas pelo Trivy) e volta para o
 # usuário sem privilégios logo em seguida.
 #
-# O nginx vem do repositório oficial nginx.org, que a imagem base não deixa
-# configurado: sem o passo abaixo, o apk upgrade não recebe correções do nginx
-# publicadas antes de uma nova tag da imagem. Mesmo método do Dockerfile
-# oficial: a chave de assinatura só é aceita se o SHA-512 conferir, e é removida
-# depois. A versão mínima fica explícita para o build falhar se não estiver lá.
-ARG NGINX_KEY_SHA512=e09fa32f0a0eab2b879ccbbc4d0e4fb9751486eedda75e35fac65802cc9faa266425edf83e261137a2f4d16281ce2c1a5f4502930fe75154723da014214f0655
-ARG NGINX_MIN_VERSION=1.30.7
+# nginx: vem do repositório oficial nginx.org, que a imagem base não deixa
+# configurado. Sem o passo abaixo, o apk upgrade não recebe correções do nginx
+# publicadas antes de uma nova tag da imagem base. Mesmo método do Dockerfile
+# oficial: a chave de assinatura só é aceita se o SHA-512 conferir (o hash é
+# público, copiado do Dockerfile oficial) e é removida depois.
+# Os módulos dinâmicos (geoip, image-filter, njs, xslt) são removidos: o app
+# só serve arquivos estáticos, nenhuma configuração os carrega, e eles fixam a
+# versão do nginx (impedindo a atualização) e ampliam a superfície de ataque.
+# O build falha se o nginx resultante for mais antigo que a versão mínima.
 USER root
 RUN set -eu; \
+    chave_sha512="e09fa32f0a0eab2b879ccbbc4d0e4fb9751486eedda75e35fac65802cc9faa266425edf83e261137a2f4d16281ce2c1a5f4502930fe75154723da014214f0655"; \
+    nginx_minimo="1.30.7"; \
     wget -q -O /tmp/nginx_signing.rsa.pub https://nginx.org/keys/nginx_signing.rsa.pub; \
-    echo "${NGINX_KEY_SHA512} */tmp/nginx_signing.rsa.pub" | sha512sum -c -; \
+    echo "${chave_sha512} */tmp/nginx_signing.rsa.pub" | sha512sum -c -; \
     mv /tmp/nginx_signing.rsa.pub /etc/apk/keys/; \
-    NGINX_REPO="https://nginx.org/packages/alpine/v$(grep -oE '^[0-9]+\.[0-9]+' /etc/alpine-release)/main"; \
-    apk upgrade --no-cache -X "$NGINX_REPO"; \
-    apk add --no-cache -X "$NGINX_REPO" "nginx>=${NGINX_MIN_VERSION}"; \
+    repo="https://nginx.org/packages/alpine/v$(grep -oE '^[0-9]+\.[0-9]+' /etc/alpine-release)/main"; \
+    modulos="$(apk info -q | grep '^nginx-module-' || true)"; \
+    if [ -n "$modulos" ]; then apk del --no-cache $modulos; fi; \
+    apk upgrade --no-cache -X "$repo"; \
+    apk add --no-cache -X "$repo" "nginx>=${nginx_minimo}"; \
     rm -f /etc/apk/keys/nginx_signing.rsa.pub; \
     nginx -v; \
     rm -rf /var/cache/apk/*
