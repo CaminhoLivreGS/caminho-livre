@@ -1,0 +1,9 @@
+# Falsos positivos do Gitleaks. Cada entrada precisa de justificativa.
+# Formato: <commit>:<arquivo>:<regra>:<linha> (impressão digital do achado).
+
+# Dockerfile, commit e68c20f: ARG NGINX_KEY_SHA512 com o hash SHA-512 da chave
+# PÚBLICA de assinatura do nginx.org, copiado do Dockerfile oficial
+# (github.com/nginx/docker-nginx-unprivileged). Não é segredo: serve para
+# verificar a chave baixada. O nome com "KEY" acionou a regra genérica. No
+# commit seguinte o valor passou a variável do RUN, que não aciona a regra.
+e68c20f110f3905ecc851036a55ed7bc5b8f00f5:Dockerfile:generic-api-key:53
