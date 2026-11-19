@@ -7,7 +7,15 @@ App colaborativo de acessibilidade urbana para pedestres com deficiência e mobi
 Trabalho da disciplina **Secure DevOps Tools & Cloud Computing**, FIAP.
 **Integrantes:** Gilson Dias Ramos Junior, Isabelle Toricelli da Silva e Jeferson Gabriel de Mendonça.
 
-📄 **Relatório completo da entrega (PDF):** [`docs/entrega/Caminho-Livre-Relatorio.pdf`](docs/entrega/Caminho-Livre-Relatorio.pdf), com diagrama, custos, LGPD, riscos aceitos e evidências.
+## Documentação da entrega
+
+| Documento | Foco | Conteúdo |
+|---|---|---|
+| 📄 [Relatório DevSecOps e Cloud](docs/entrega/Caminho-Livre-Relatorio.pdf) | **Secure DevOps e nuvem (Azure)** | Arquitetura, container e Terraform, pipeline DevSecOps, observabilidade, Key Vault, custos, responsabilidade compartilhada, LGPD, riscos aceitos e evidências |
+| 📄 [Documentação técnica de visão computacional](docs/entrega/Caminho-Livre-Documentacao-Visao-Computacional.pdf) | **Visão computacional** | Fundamentos de processamento de imagem, pipelines passo a passo com imagens intermediárias, métricas extraídas, gestão de memória no WebAssembly, resultados e limitações, anonimização (LGPD) e referências |
+| 🎬 [Vídeo de demonstração (pitch)](https://youtu.be/DiCNZ2wbM_M) | Apresentação do MVP | Demonstração do aplicativo |
+
+O resumo técnico do módulo de visão também está em [`docs/visao-computacional.md`](docs/visao-computacional.md).
 
 ## Ficha técnica do MVP
 
