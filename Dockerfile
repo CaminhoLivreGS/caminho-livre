@@ -44,8 +44,25 @@ LABEL org.opencontainers.image.title="caminho-livre" \
 
 # Atualiza pacotes do SO (reduz CVEs apontadas pelo Trivy) e volta para o
 # usuário sem privilégios logo em seguida.
+#
+# O nginx vem do repositório oficial nginx.org, que a imagem base não deixa
+# configurado: sem o passo abaixo, o apk upgrade não recebe correções do nginx
+# publicadas antes de uma nova tag da imagem. Mesmo método do Dockerfile
+# oficial: a chave de assinatura só é aceita se o SHA-512 conferir, e é removida
+# depois. A versão mínima fica explícita para o build falhar se não estiver lá.
+ARG NGINX_KEY_SHA512=e09fa32f0a0eab2b879ccbbc4d0e4fb9751486eedda75e35fac65802cc9faa266425edf83e261137a2f4d16281ce2c1a5f4502930fe75154723da014214f0655
+ARG NGINX_MIN_VERSION=1.30.7
 USER root
-RUN apk upgrade --no-cache && rm -rf /var/cache/apk/*
+RUN set -eu; \
+    wget -q -O /tmp/nginx_signing.rsa.pub https://nginx.org/keys/nginx_signing.rsa.pub; \
+    echo "${NGINX_KEY_SHA512} */tmp/nginx_signing.rsa.pub" | sha512sum -c -; \
+    mv /tmp/nginx_signing.rsa.pub /etc/apk/keys/; \
+    NGINX_REPO="https://nginx.org/packages/alpine/v$(grep -oE '^[0-9]+\.[0-9]+' /etc/alpine-release)/main"; \
+    apk upgrade --no-cache -X "$NGINX_REPO"; \
+    apk add --no-cache -X "$NGINX_REPO" "nginx>=${NGINX_MIN_VERSION}"; \
+    rm -f /etc/apk/keys/nginx_signing.rsa.pub; \
+    nginx -v; \
+    rm -rf /var/cache/apk/*
 
 # Configuração do servidor (headers de segurança, /healthz, métricas internas).
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
