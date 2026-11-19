@@ -1,6 +1,7 @@
 #!/bin/sh
 # Gera docs/entrega/Caminho-Livre-Relatorio.pdf a partir de relatorio.html
-# (Google Chrome headless). O diagrama vem de arquitetura.png; para atualizá-lo,
+# (Google Chrome headless), com o mesmo estilo (estilos.css) da Documentação
+# Técnica de Visão Computacional. O diagrama vem de arquitetura.png; para atualizá-lo,
 # edite arquitetura.mmd e renderize em https://mermaid.live (exportar PNG).
 # Uso: sh docs/entrega/gerar-pdf.sh
 set -eu
